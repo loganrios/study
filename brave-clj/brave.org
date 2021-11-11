@@ -1,0 +1,1262 @@
+#+TITLE: Clojure for the Brave and True! Notes
+#+author: Logan Rios
+
+Are you really planning on betting your whole startup on a language you've never learned before? Son...
+
+Website: https://www.braveclojure.com/clojure-for-the-brave-and-true/
+
+* :toc:
+- [[#clojure-crash-course][Clojure Crash Course]]
+  - [[#control-flow][Control Flow]]
+  - [[#name-values-with-def][Name values with def]]
+  - [[#data-structures][Data structures]]
+  - [[#functions][Functions]]
+  - [[#function-calls-macro-calls-and-special-forms][Function Calls, Macro Calls, and Special Forms]]
+  - [[#defining-functions][Defining Functions]]
+  - [[#pulling-it-all-together][Pulling it all together]]
+- [[#core-functions-in-depth][Core Functions in Depth]]
+  - [[#programming-to-abstractions][Programming to Abstractions]]
+  - [[#seq-function-examples][Seq Function Examples]]
+
+* Clojure Crash Course
+# TODO make this section tangle to core.clj
+TL;DR Clojure is a Lisp, +though the vector/list distinction is weird+.
+
+** Control Flow
+*** if
+~if~ takes a boolean form and evaluates to a truthy or falsey value.
+
+#+begin_src clojure
+(if true
+  "By Zeus's Hammer!"
+  "By Aquaman's Trident!")
+#+end_src
+
+#+RESULTS:
+: By Zeus's Hammer!
+
+You can technically omit the =else= branch, but it seems to throw warnings with the compiler.
+
+#+begin_src clojure
+(if false
+  "By Odin's Elbow!")
+#+end_src
+
+However, this is different from normal languages. Each branch can only have one form. In Ruby, for example, we'd be more used to doing this:
+#+begin_src ruby :results output
+if true
+  puts "Good!"
+  puts "More Good!"
+else
+  puts "Bad..."
+  puts "More Bad..."
+end
+#+end_src
+
+#+RESULTS:
+: Good!
+: More Good!
+
+While statements like this would be invalid in Clojure, we can instead rely on the ~do~ operator.
+
+*** do
+The ~do~ operator takes an arbitrary list and evaluates every form (I think, please don't shoot me).
+
+#+begin_src clojure
+(if true
+  (do (println "Success!")
+      "By Zeus's Hammer!")
+  (do (println "Failure!")
+      "By Aquaman's Trident!"))
+#+end_src
+
+#+RESULTS:
+: By Zeus's Hammer!
+
+Loganote: It's funny--this suddenly makes Lisps look a lot more like the C family. If I wanted to be really cursed, I suppose I could just write everything as gigantic ~do~ statements, though I'm betting this is generally discouraged in the Lisp community.
+
+*** when
+~when~ is a combo of ~if~ and ~do~, but with no ~else~ branch.
+
+#+begin_src clojure
+(when true
+  (println "Success!")
+  "abra cadabra")
+#+end_src
+
+#+RESULTS:
+: abra cadabra
+
+*** nil, true, false, Truthiness, Equality, and Boolean Expressions
+Use ~nil?~ to check if a value is ~nil~.
+
+The equality operator is ~=~.
+
+~or~ will return either the first truthy value or the last value.
+#+begin_src clojure
+(or false nil :large :venti)
+; :large
+(or (= 0 1) (= "yes" "no"))
+; false
+(or nil)
+; nil
+#+end_src
+
+~and~ will return the first falsey value, or, if no values are falsey, the last truthy value.
+
+#+begin_src clojure
+(and :free :hot)
+; hot
+(and :feel nil false)
+; nil
+#+end_src
+
+** Name values with def
+Note the semantic difference between "bind" and "assign".
+
+#+begin_src clojure
+(def failed-protag
+  ["Larry Potter" "Doreen Explorer" "The Incredible Bulk"])
+
+failed-protag
+#+end_src
+
+#+RESULTS:
+| #'clojure-noob.core/failed-protag                        |
+| ["Larry Potter" "Doreen Explorer" "The Incredible Bulk"] |
+
+In Ruby, you might perform multiple assignments to a variable to build up its value.
+
+#+begin_src ruby :results output
+severity = :mild
+error_message = "Oh god! It's a disaster! We're "
+if severity == :mild
+  error_message = error_message + "mildly inconvenienced."
+else
+  error_message = error_message + "doomed!"
+end
+
+puts error_message
+#+end_src
+
+#+RESULTS:
+: Oh god! It's a disaster! We're mildly inconvenienced.
+
+You /could/ do something similar in Clojure, but it does make it harder to understand your program's behavior. You may not know which value is associated with each name or why that value might have changed. Clojure does provide tools for dealing with change, so you should /very rarely/ need to alter a name/value association.
+
+So, instead of:
+
+#+begin_src clojure
+(def severity :mild)
+(def error-message "Oh god! We're ")
+(if (= severity :mild)
+  (def error-message (str error-message "mildly inconvenienced."))
+  (def error-message (str error-message "doomed.")))
+error-message
+#+end_src
+
+#+RESULTS:
+| #'clojure-noob.core/severity           |
+| #'clojure-noob.core/error-message      |
+| #'clojure-noob.core/error-message      |
+| "Oh god! We're mildly inconvenienced." |
+
+Instead, try:
+
+#+begin_src clojure
+(defn error-message
+  [severity]
+  (str "Oh god! We're "
+       (if (= severity :mild)
+         "mildly inconvenienced."
+         "doomed!")))
+
+(error-message :mild)
+#+end_src
+
+#+RESULTS:
+| #'clojure-noob.core/error-message      |
+| "Oh god! We're mildly inconvenienced." |
+
+Generally speaking, you should treat ~def~ as if it's defining constants. You'll learn how to work with this limitation by embracing the functional programming paradigm.
+
+** Data structures
+If you're usually an object-oriented person, do your best to do the most with the basic types available here. The big thing is that all of Clojure's data structures are immutable. For example, in Ruby, you could:
+
+#+begin_src ruby
+failed_protag = [
+  "Larry Potter",
+  "Doreen the Explorer",
+  "The Incredible Bulk"
+]
+failed_protag[0] = "Gary Potter"
+failed_protag
+#+end_src
+
+#+RESULTS:
+| Gary Potter | Doreen the Explorer | The Incredible Bulk |
+
+Clojure has /no/ equivalent for this. You'll learn why in Chapter 10.
+
+*** Numbers
+
+There are integers, floats, and ratios.
+#+begin_src clojure
+93
+1.2
+1/5
+#+end_src
+
+*** Strings
+Strings are delineated by /only/ double quotes. Clojure also does not have string interpolation (Logan: aww), only allowing concatenation via the ~str~ function.
+
+#+begin_src clojure
+"Lord Voldemort"
+"\"He who must not be named\""
+"\"Great cow of Moscow\" - Hermes Conrad"
+(def name "Chewbacca")
+(str "\"Uggllglglglglglgll\" - " name)
+#+end_src
+
+#+RESULTS:
+| "Lord Voldemort"                          |
+| "\"He who must not be named\""            |
+| "\"Great cow of Moscow\" - Hermes Conrad" |
+| #'clojure-noob.core/name                  |
+| "\"Uggllglglglglglgll\" - Chewbacca"      |
+
+*** Maps
+Similar to dictionaries or hashes in other languages. Associate a value with another value.
+
+The two kinds of maps in Clojure are Hash Maps and Sorted Maps. Only the more basic hash maps will be covered.
+#+begin_src clojure
+{} ; empty map
+{:first-name "Charlie"
+ :last-name "McFishwich"}
+{"string-key" +} ;; associates the string with the plus function
+{:name {:first "John" :middle "Jacob" :last "Jingleheimerschmidt"}}
+#+end_src
+
+Maps can be of any of type--strings, numbers, maps, vectors, and even functions.
+
+You can use map literals (like above), and you can also use the ~hash-map~ function. You can look up values in the map with the ~get~ function.
+#+begin_src clojure
+(hash-map :a 1 :b 2)
+(get {:a 0 :b 1} :b)
+(get {:a 0 :b {:c "ho hum"}} :b)
+#+end_src
+
+#+RESULTS:
+| {:b 2, :a 1}  |
+| 1             |
+| {:c "ho hum"} |
+
+~get~ returns ~nil~ if it doesn't find the key, but you can also give it a default value to return.
+#+begin_src clojure
+(get {:a 0 :b 1} :c)
+(get {:a 0 :b 1} :c "unicorns?")
+#+end_src
+
+#+RESULTS:
+: unicorns?
+
+The ~get-in~ function looks up values in nested maps. (Logan: but how?)
+
+#+begin_src clojure
+(get-in {:a 0 :b {:c "ho hum"}} [:b :c])
+#+end_src
+
+#+RESULTS:
+: ho hum
+
+(Logan: bruhhh) Another way to look up a value in a map is to treat the map like a function with the key as its argument.
+
+#+begin_src clojure
+({:name "The Human Coffeepot"} :name)
+#+end_src
+
+#+RESULTS:
+: The Human Coffeepot
+
+*** Keywords
+That ~:string~ syntax that you keep seeing is called a keyword, frequently used as keys in maps. Keywords can be used as functions that look up the corresponding value in a data structure, akin to ~get~, and provide a default value!
+#+begin_src clojure
+(:a {:a 1 :b 2 :c 3})
+(get {:a 1 :b 2 :c 3} :a)
+(:d {:a 1 :b 2 :c 3} "No gnome knows homes like Noah knows")
+#+end_src
+
+#+RESULTS:
+|                                      1 |
+|                                      1 |
+| "No gnome knows homes like Noah knows" |
+
+So-called "Real Clojurists" use the keyword-as-function syntax, so you can do it, too.
+
+*** Vectors
+Basically an array, but they can be of any type, and you can mix types. You can use ~get~, make a new vector with the ~vector~ function, and add additional elements to the vector with ~conj~.
+
+#+begin_src clojure
+[3 2 1]
+(get [3 2 1] 0)
+(get ["a" {:name "Pugsley Winterbottom"} "c"] 1)
+(vector "creepy" "full" "moon")
+(conj [1 2 3] 4)
+#+end_src
+
+#+RESULTS:
+| [3 2 1]                        |
+| 3                              |
+| {:name "Pugsley Winterbottom"} |
+| ["creepy" "full" "moon"]       |
+| [1 2 3 4]                      |
+
+*** Lists
+Another linear collection of values, but... well, you know how Lisp is. Instead of ~get~, use ~nth~. Be sure to quote if you want to avoid evaluation. Note that ~get~ on a vector is much faster than using ~nth~ on a list.
+
+#+begin_src clojure
+'(1 2 3 4)
+(nth '(:a :b :c) 0)
+(list 1 "two" {3 4})
+(conj '(1 2 3) 4)
+#+end_src
+
+#+RESULTS:
+| (1 2 3 4)       |
+| :a              |
+| (1 "two" {3 4}) |
+| (4 1 2 3)       |
+
+*** Sets
+Sets are collections of unique values. Clojure has hash sets and sorted sets, but we'll only work with hash sets, because they are used more often.
+#+begin_src clojure
+#{"kurt vonnegut" 20 :icicle}
+(hash-set 1 1 2 2)
+(conj #{:a :b} :b)
+(set [3 3 3 4 4])
+#+end_src
+
+Check for membership using ~contains?~, which will return true or false. ~get~ will return the value if it is in the set, or ~nil~ if it is not. You can also use the keyword-as-a-function.
+
+#+begin_src clojure
+(contains? #{:a :b} :a)
+(contains? #{:a :b} 3)
+(contains? #{nil} nil)
+(:a #{:a :b} :a)
+(get #{:a :b} :a)
+(get #{:a nil} nil)
+(get #{:a :b} "kurt vonnegut")
+#+end_src
+
+#+RESULTS:
+| true  |
+| false |
+| true  |
+| :a    |
+| :a    |
+
+Using ~get~ to check if a ~nil~ is in the set will still return ~nil~, which is confusing! ~contains?~ is the better option for testing membership.
+
+*** Closing Notes
+Reach for the builtins first. Resist the object-oriented urge.
+
+** Functions
+Let's, uh, do some weirdly cursed things with functions.
+
+#+begin_src clojure
+(or + -)
+((or + -) 1 2 3)
+((and (= 1 1) +) 1 2 3)
+((first [+ 0]) 1 2 3)
+#+end_src
+
+#+RESULTS:
+| #function[clojure.core/+] |
+|                         6 |
+|                         6 |
+|                         6 |
+
+Let's induce an error by trying to use something as a function when it is not.
+#+begin_src clojure
+(1 2 3 4)
+("test" 1 2 3)
+#+end_src
+
+#+RESULTS:
+| class java.lang.ClassCastException |
+| class java.lang.ClassCastException |
+
+Functions can take any expressions as arguments, including other functions. Functions that either take a function as an argument or return a function as an argument are called /higher-order functions/. Programming languages with higher-order-functions are said to support /first-class-functions/ because you can treat functions as values in the same way you treat more familiar data types.
+
+#+begin_src clojure
+(inc 1.1)
+(map inc [0 1 2 3])
+#+end_src
+
+#+RESULTS:
+|       2.1 |
+| (1 2 3 4) |
+
+(Wondering why ~map~ didn't return a vector, even though we gave it as an argument? Find out why in Chapter 4.)
+
+Lisps allow you to create functions that generalize over processes. ~map~ allows you to generalize the process of transforming a collection by applying any function over any collection.
+
+Clojure evaluates all function arguments recursively before passing them to a function.
+
+#+begin_src clojure
+(+ (inc 199) (/ 100 (- 7 2)))
+(+ 200 (/ 100 (- 7 2)))
+(+ 200 20)
+#+end_src
+
+#+RESULTS:
+| 220 |
+| 220 |
+| 220 |
+
+** Function Calls, Macro Calls, and Special Forms
+Special forms are called that because they don't always evaluate all of their operands. ~if~ is an example of this (Logan: remember SICP? Good times). You also can't use special forms as arguments to functions, because they implement core Clojure functionality that can't be implemented with functions. Clojure has a very small handful of special forms.
+
+Macros are similar to special forms in that they evaluate their operands differently from function calls, and they also may not be passed as arguments to functions.
+
+** Defining Functions
+Function definitions are composed of five main parts:
++ ~defn~
++ function name
++ a docstring describing the function (optional)
++ parameters listed in brackets
++ function body
+
+An example:
+
+#+begin_src clojure
+(defn too-enthusiastic
+  "Return a cheer that might be a bit too enthusiastic."
+  [name]
+  (str "Oh my god! " name " you are the best!"))
+
+(too-enthusiastic "Zelda")
+#+end_src
+
+#+RESULTS:
+| #'clojure-noob.core/too-enthusiastic |
+| "Oh my god! Zelda you are the best!" |
+
+*** Docstring
+Useful. You can view the docstring for a given function in the REPL with ~(doc fn-name)~, for example, ~(doc map)~. You can also use it to generate documentation.
+
+*** Parameters and Arity
+Functions may have zero or more parameters. There are arguments, which can be of any type. The number of parameters is the function's /arity/.
+
+#+begin_src clojure
+(defn no-params
+  []
+  "I take no parameters!")
+(defn one-param
+  [x]
+  (str "I take one parameter: " x))
+(defn two-params
+  [x y]
+  (str "Two parameters! Smash together! " x y))
+#+end_src
+
+There is also /arity overloading/. Different function bodies will run depending on the arity.
+
+#+begin_src clojure
+(defn multi-arity
+  ([x y z]
+   (do-things x y z))
+  ([x y]
+   (do-things x y))
+  ([x]
+   (do-things x)))
+#+end_src
+
+We can use arity overloading to provide default values for arguments.
+
+#+begin_src clojure
+(defn x-chop
+  "Describe the type of chop you're inflicting on someone."
+  ([name chop-type]
+   (str "I " chop-type " chop " name "! Take that!"))
+  ([name]
+   (x-chop name "karate")))
+
+(x-chop "Kanye East")
+#+end_src
+
+#+RESULTS:
+| #'clojure-noob.core/x-chop             |
+| "I karate chop Kanye East! Take that!" |
+
+Perfectly natural to define a function in terms of itself. You can also do some weird things with arity.
+
+#+begin_src clojure
+(defn weird-arity
+  ([]
+   "Destiny dressed you this morning, my friend, and now Fear is
+trying to pull off your pants. If you give up, if you give in,
+you're going to end up naked with Fear just standing there laughing
+and your dangling unmentionables! - the Tick")
+  ([number]
+   (inc number)))
+#+end_src
+
+You can also have variable-arity! This is done by including a /rest parameter/, as in "put the rest of the arguments in a list with the following name", indicated by an ampersand.
+
+#+begin_src clojure
+(defn codger-communication
+  [whippersnapper]
+  (str "Get off my lawn, " whippersnapper "!"))
+
+(defn codger
+  [& whippersnappers]
+  (map codger-communication whippersnappers))
+
+(codger "Billy" "Anna Marie" "The Incredible Bulk")
+#+end_src
+
+#+RESULTS:
+| #'clojure-noob.core/codger-communication                                                           |
+| #'clojure-noob.core/codger                                                                         |
+| ("Get off my lawn, Billy!" "Get off my lawn, Anna Marie!" "Get off my lawn, The Incredible Bulk!") |
+
+You can mix rest parameters with normal parameters, but the rest parameter has to come last.
+
+#+begin_src clojure
+(defn favorite-things
+  [name & things]
+  (str "Hi, " name ", here are my favorite things: "
+       (clojure.string/join ", " things)))
+
+(favorite-things "Doreen" "gum" "shoes" "kara-te")
+#+end_src
+# TODO this seems to be missing a require...
+
+*** Destructuring
+Concisely bind names to values within a collection.
+
+#+begin_src clojure
+(defn my-first
+  [[first-thing]]
+  first-thing)
+
+(my-first ["oven" "bike" "war axe"])
+#+end_src
+
+#+RESULTS:
+| #'clojure-noob.core/my-first |
+| "oven"                       |
+
+Okay, so it basically just lets you name things in a list/vector received as an argument, and then shove the rest of that list into the rest parameter. Neat.
+
+#+begin_src clojure :results output
+(defn chooser
+  [[first-choice second-choice & unimportant-choice]]
+  (println (str "Your first choice is: " first-choice))
+  (println (str "Your second choice is: " second-choice))
+  (println (str "We're ignoring the rest of your choices."))
+  (println (str "Your unimportant choices are " unimportant-choice)))
+
+(chooser ["Marmalade", "Handsome Jack", "Pigpen", "Aquaman"])
+(chooser "fake")
+#+end_src
+
+#+RESULTS:
+: #'clojure-noob.core/chooser
+# TODO is borked?
+
+#+begin_src clojure :results output
+(defn announce-treasure-location
+  [{lat :lat lng :lng}]
+  (println (str "Treasure lat: " lat))
+  (println (str "Treasure lng: " lng)))
+
+(announce-treasure-location {:lat 28.2 :lng 81.33})
+#+end_src
+
+#+RESULTS:
+: #'clojure-noob.core/announce-treasure-location
+# Oh duh. They're printing.
+
+*** Function Body
+
+The function body can contain forms of any kind, but will automatically return the last form evaluated.
+
+#+begin_src clojure
+(defn illustrative
+  []
+  (+ 1 304)
+  30
+  "joe")
+(illustrative)
+(defn number-comment
+  [x]
+  (if (> x 6)
+    "Huge number."
+    "Small number."))
+(number-comment 5)
+(number-comment 7)
+#+end_src
+
+#+RESULTS:
+| #'clojure-noob.core/illustrative   |
+| "joe"                              |
+| #'clojure-noob.core/number-comment |
+| "Small number."                    |
+| "Small number."                    |
+
+*** All functions created equal
+~+~ is just a function. ~inc~ and ~map~ are all just functions. There's no better ones or special treatment among /functions/ (not including special forms, macros, etc.).
+
+*** Anonymous functions
+You can use the ~fn~ form. It can be treated nearly identically to ~defn~. You could even associate it with a name, if you so choose...
+
+#+begin_src clojure
+(fn []
+  ())
+(map (fn [name] (str "Hi, " name))
+     ["Darth Vader" "Mr. Magoo"])
+((fn [x] (* x 3)) 8)
+(def my-special-mult (fn [x] (* x 3)))
+(my-special-mult 12)
+#+end_src
+
+#+RESULTS:
+| #function[clojure-noob.core/eval14207/fn--14208] |
+| ("Hi, Darth Vader" "Hi, Mr. Magoo")              |
+| 24                                               |
+| #'clojure-noob.core/my-special-mult              |
+| 36                                               |
+
+There is another way to create anonymous functions. This style is best for /simple/ anonymous functions, because it is so visibly compact. However, it can easily become unreadable if the function is longer or more complex, in which case, use ~fn~.
+
+#+begin_src clojure
+#(* % 3)
+(#(* % 3) 8)
+(map #(str "Hi, " %)
+     ["Darth Vader" "Mr. Magoo"])
+;; the % sign means 'this positional argument', defaulting to 1.
+(* 8 3)
+#(* % 3)
+(#(str %1 " and " %2) "cornbread" "butter beans")
+;; the rest parameter is %&
+(#(identity %&) 1 "blarg" :yip)
+#+end_src
+
+#+RESULTS:
+| #function[clojure-noob.core/eval14226/fn--14227] |
+| 24                                               |
+| ("Hi, Darth Vader" "Hi, Mr. Magoo")              |
+| 24                                               |
+| #function[clojure-noob.core/eval14246/fn--14247] |
+| "cornbread and butter beans"                     |
+| (1 "blarg" :yip)                                 |
+
+*** Returning Functions
+Functions that can return other functions! The functions they return are called /closures/, which means that they can access all the variables that were in scope when the function was created.
+
+#+begin_src clojure
+(defn inc-maker
+  "Create a custom incrementor"
+  [inc-by]
+  #(+ % inc-by))
+(def inc3 (inc-maker 3))
+(inc3 7)
+#+end_src
+
+#+RESULTS:
+| #'clojure-noob.core/inc-maker |
+| #'clojure-noob.core/inc3      |
+| 10                            |
+
+** Pulling it all together
+*** Shire Model
+Model a hobbit's body parts and each part's relative size. We'll avoid repetition by only specifying the left side of each symmetrical part. This structure is a vector of maps.
+
+#+name: body-parts
+#+begin_src clojure
+(def asym-hobbit-body-parts [{:name "head" :size 3}
+                             {:name "left-eye" :size 1}
+                             {:name "left-ear" :size 1}
+                             {:name "mouth" :size 1}
+                             {:name "nose" :size 1}
+                             {:name "neck" :size 2}
+                             {:name "left-shoulder" :size 3}
+                             {:name "left-upper-arm" :size 3}
+                             {:name "chest" :size 10}
+                             {:name "back" :size 10}
+                             {:name "left-forearm" :size 3}
+                             {:name "abdomen" :size 6}
+                             {:name "left-kidney" :size 1}
+                             {:name "left-hand" :size 2}
+                             {:name "left-knee" :size 2}
+                             {:name "left-thigh" :size 4}
+                             {:name "left-lower-leg" :size 3}
+                             {:name "left-achilles" :size 1}
+                             {:name "left-foot" :size 2}])
+
+(require '[clojure.string])
+(defn matching-part
+  [part]
+  {:name (clojure.string/replace (:name part) #"^left-" "right-")
+   :size (:size part)})
+
+(defn symmetrize-body-parts
+  "Expects a seq of maps that have a :name and a :size"
+  [asym-body-parts]
+  (loop [remaining-asym-parts asym-body-parts
+         final-body-parts []]
+    (if (empty? remaining-asym-parts)
+      final-body-parts
+      (let [[part & remaining] remaining-asym-parts]
+        (recur remaining
+               (into final-body-parts
+                     (set [part (matching-part part)])))))))
+
+#+end_src
+
+#+RESULTS: body-parts
+| #'clojure-noob.core/asym-hobbit-body-parts |
+| #'clojure-noob.core/matching-part          |
+| #'clojure-noob.core/symmetrize-body-parts  |
+
+#+begin_src clojure :noweb yes
+<<body-parts>>
+(symmetrize-body-parts asym-hobbit-body-parts)
+#+end_src
+
+(Logan: just trust me--it works, it just also clutters up the whole Org document)
+
+*** let
+Binds names to values. First, we bind ~x~ to the value ~3~, then the name ~dalmations~ to the result of the ~take~ expression. ~let~ also introduces a new scope.
+
+#+name: dalmations
+#+begin_src clojure
+(let [x 3]
+  x)
+(def dalmation-list
+  ["Pongo" "Perdita" "Puppy 1" "Puppy 2"])
+(let [dalmations (take 2 dalmation-list)]
+  dalmations)
+(def x 0)
+(let [x 1] x)
+#+end_src
+
+#+RESULTS:
+| 3                                  |
+| #'clojure-noob.core/dalmation-list |
+| ("Pongo" "Perdita")                |
+| #'clojure-noob.core/x              |
+| 1                                  |
+
+i.e., "I want ~x~ to be ~0~ in the global context, but within the context of this ~let~, it should be ~1~". (Logan: so what's the difference between ~let~ and ~def~, then? Other than the scope, I guess. That's probably it.) Rest parameters also apply for ~let~ expressions.
+
+#+begin_src clojure :noweb yes
+<<dalmations>>
+(let [[pongo & dalmations] dalmation-list]
+  [pongo dalmations])
+#+end_src
+
+#+RESULTS:
+| 3                                         |
+| #'clojure-noob.core/dalmation-list        |
+| ("Pongo" "Perdita")                       |
+| #'clojure-noob.core/x                     |
+| 1                                         |
+| ["Pongo" ("Perdita" "Puppy 1" "Puppy 2")] |
+
+The ~into~ function is what converts the set ~#{:a}~ into a vector.
+
+#+begin_src clojure
+(into [] (set [:a :a]))
+#+end_src
+
+#+RESULTS:
+| :a |
+
+*** loop
+Note that ~symmetrize-body-parts~ uses ~loop~. Let's do a simple example. The first line begins the loop and introduces a binding with an initial value (in this case, 0). It prints the message, then it checks the value of ~iteration~. If the value is greater than 3, it says goodbye.
+
+#+begin_src clojure :results output
+(loop [iteration 0]
+  (println (str "Iteration " iteration))
+  (if (> iteration 3)
+    (println "Goodbye!")
+    (recur (inc iteration))))
+#+end_src
+
+#+RESULTS:
+: Iteration 0
+: Iteration 1
+: Iteration 2
+: Iteration 3
+: Iteration 4
+: Goodbye!
+
+*** regex
+Regular expression notation is a quote after a hash mark. In the =matching-part= function, we use the regular expression =#"^left-"= to match the strings starting with ="left-"= in order to replace with ="right-"=. The carat signals that it will only match the beginning of the string.
+
+#+begin_src clojure
+(re-find #"left-" "left-eye")
+(re-find #"^left-" "cleft-chin")
+(re-find #"^left-" "wongleblart")
+(require '[clojure.string])
+(defn matching-part
+  [part]
+  {:name (clojure.string/replace (:name part) #"^left-" "right-")
+   :size (:size part)})
+(matching-part {:name "left-eye" :size 1})
+(matching-part {:name "head" :size 3})
+#+end_src
+
+#+RESULTS:
+| "left-"                           |
+| #'clojure-noob.core/matching-part |
+| {:name "right-eye", :size 1}      |
+| {:name "head", :size 3}           |
+
+*** reduce
+The 'process each element in a sequence and build a result' is so common that there's a built-in function for it called =reduce=.
+
+#+begin_src clojure
+(reduce + [1 2 3 4])
+(+ (+ (+ 1 2) 3) 4)
+#+end_src
+
+#+RESULTS:
+| 10 |
+| 10 |
+
+=reduce= works according to the following steps:
+1. apply the given function to the first two elements of a sequence.
+2. apply the given function to the result and the next element of the sequence. In this case, the result of step 1 is =3=, and the next element of the sequence is 3 as well. So the final result is =(+ 3 3)=.
+3. Repeat step 2 for every remaining element in the series.
+
+=reduce= also takes an optional initial value.
+#+begin_src clojure
+(reduce + 15 [1 2 3 4])
+#+end_src
+
+If you provide an initial value, =reduce= starts by applying the given function to the initial value and the first element of the sequence rather than the first two elements of the sequence.
+
+In this example, =reduce= takes a collection of elements and returns a single number. Although programmers use =reduce= this way, you can also use =reduce= to return an /even larger/ collection than the one you started with. All =reduce= does is abstract the task of 'process a collection and build a result', which is agnostic to the /type/ of result.
+
+#+begin_src clojure
+(defn my-reduce
+  ([f initial coll]
+   (loop [result initial
+          remaining coll]
+     (if (empty? remaining)
+       result
+       (recur (f result (first remaining)) (rest remaining)))))
+  ([f [head & tail]]
+   (my-reduce f head tail)))
+#+end_src
+
+*** Hobbit Violence
+Determine which part of the hobbit was hit.
+#+begin_src clojure
+(defn hit
+  [asn-body-parts]
+  (let [sym-parts (better-symmetrize-body-parts asym-body-parts)
+        body-part-size-sum (reduce + (map :size sym-parts))
+        target (rand body-part-size-sum)]
+    (loop [[part & remaining] sym-parts
+           accumulated-size (:size part)]
+      (if (> accumulated-size-target)
+        part
+        (recur remaining (+ accumulated-size (:size (first remaining))))))))
+#+end_src
+
+=hit= will take a vector of asymmetrical body parts, symmetrize it, and then sum the size of the parts. Once we sum the sizes, it's like each number from 1 through =body-part-size-sum= corresponds to a body part; 1 might correspond to the left eye, and 2, 3, 4 might correspond to the head. This makes it so when you hit a body part (by choosing a random number in this range), the likelihood that a particular body part is hit will depend on the size of the body part.
+
+Finally, one of these number is randomly chosen, then we use =loop= to find and return the body part that corresponds to the number. The loop does this by keeping track of the accumulated sizes of parts that we've checked and checking whether the accumulated size is greater than the target.
+
+*** Exercises
+#+begin_quote
+1. Use the =str=, =vector=, =list=, =hash-map=, and =hash-set= functions.
+#+end_quote
+
+#+begin_src clojure
+(str ["Hell" "for" "Ourselves"] "Kai Whiston")
+(vector 1 2 3 "swag" "abc")
+(list "why" "can't i" "hold all of these" 'oranges)
+(hash-map :logan "founder"
+          :matt "statistician"
+          :aaron "head of recommendation")
+(hash-set :love :is :in :the :love :air)
+;; lol, it sorted it in some way?
+#+end_src
+
+#+begin_quote
+2. Write a function that takes a number and adds 100 to it.
+#+end_quote
+
+#+begin_src clojure
+(defn add10
+  [x]
+  (+ x 10))
+(add10 30)
+#+end_src
+
+#+RESULTS:
+| #'clojure-noob.core/add10 |
+|                        40 |
+
+#+begin_quote
+3. Write a function, =dec-maker=, that works exactly like the function =inc-maker= except with subtraction.
+#+end_quote
+
+#+begin_src clojure
+(defn dec-maker
+  "Create a custom decrementor"
+  [dec-by]
+  #(- % dec-by))
+(def dec9 (dec-maker 9))
+(dec9 10)
+;; => 1
+#+end_src
+
+#+RESULTS:
+| #'clojure-noob.core/dec-maker |
+| #'clojure-noob.core/dec9      |
+| 1                             |
+
+#+begin_quote
+4. Write a function, =mapset=, that works like =map= except the return value is a set.
+#+end_quote
+
+**** TODO Come back to all of these :(
+#+begin_src clojure
+(defn mapset
+  [f coll]
+  ())
+(mapset inc [1 1 2 2])
+;; => #{2 3}
+#+end_src
+
+#+RESULTS:
+| #'clojure-noob.core/mapset |
+| ()                         |
+
+#+begin_quote
+5. Create a function that's similar to =symmetrize-body-parts= except it has to work with weird space aliens with radial symmetry. Instead of two eyes, arms, legs, and so on, they have five. (Ex. 5)
+#+end_quote
+
+#+begin_quote
+6. Create a function that generalizes =symmetrize-body-parts= and the function you created in Exercise 5. The new function should take a collection of body parts and the number of matching body parts to add. If you're completely new to Lisp languages and functional programming, it won't be obvious how to do this. If you get stuck, just move on to the next chapter and revisit the problem later.
+#+end_quote
+* Core Functions in Depth
+** Programming to Abstractions
+Clojure differentiates itself from Emacs Lisp by focusing on programming to abstractions. Presume that the =map= function is passed a vector. In Emacs Lisp, this would return a List, whereas in Clojure, it will return another vector. Abstractions can be thought of as named collections of operations.
+
+Example: a /battery/ is an abstraction including the operation "connect a conducting medium to its anode and cathode", where the output is an electrical current. It doesn't matter if the battery is made out of lithium or potatoes--so long as it responds to the set of operations that define a battery.
+
+*** Everything is a seq
+=map= does not care how lists, vectors, sets, and maps are implemented. It only cares about whether it can perform sequence operations on them. In other words, it is defined in terms of the sequence abstraction. You can call anything that can be treated like a sequence a =seq= among Clojurists.
+
+If the core seq functions =first=, =rest=, and =cons= work on a data structure, you can say that the data structure /implements/ the sequence abstraction.
+
+#+begin_src clojure
+(defn titleize
+  [topic]
+  (str topic " for the Brave and True"))
+(map titleize ["Hamsters" "Ragnarok"])
+(map titleize '("Empathy" "Decorating"))
+(map titleize #{"Elbows" "Soap Carving"})
+(map #(titleize (second %)) {:uncomfortable-thing "Winking"})
+#+end_src
+
+#+RESULTS:
+| #'clojure-noob.core/titleize                                            |
+| ("Hamsters for the Brave and True" "Ragnarok for the Brave and True")   |
+| ("Empathy for the Brave and True" "Decorating for the Brave and True")  |
+| ("Elbows for the Brave and True" "Soap Carving for the Brave and True") |
+| ("Winking for the Brave and True")                                      |
+
+=map= works identically with vectors and lists. The third example shows htat =map= can work with unsorted sets. In the fourth example, you must call =second= on the anonymous function's argument before title-izing it because the argument is a map. We'll explain why, soon.
+
+*** first, rest, cons
+A detour to JS (hooray...) to implement a linked list and three core functions: =first=, =rest=, and =cons=. We'll try to appreciate the distinction between the seq abstraction in Clojure and the concrete implementation of a linked list. It doesn't matter how the data struture is implemented, because all Clojure asks is if it can use those functions.
+
+#+name: js-nodes
+#+begin_src javascript
+var node3 = {
+    value: "last",
+    next: null
+};
+var node2 = {
+    value: "middle",
+    next: node3
+};
+var node1 = {
+    value: "first",
+    next: node2
+};
+#+end_src
+
+=first= will return the value for the requested node, =rest= returns the remaining values after the requested node, and =cons= adds a new node with the given value to the beginning of the list.
+
+#+begin_src javascript :noweb yes
+<<js-nodes>>
+var first = function(node) {
+    return node.value;
+};
+
+var rest = function(node) {
+    return node.next;
+};
+
+var cons = function(newValue, node) {
+    return {
+        value: newValue,
+        next: node
+    };
+};
+
+// I don't have a JS interpreter lmao
+first(node1); // => "first"
+first(rest(node1)); // => "middle"
+first(rest(rest(node1))); // => "last"
+var node0 = cons("new first", node1);
+first(node0); // => "new first"
+first(rest(node0)); // => "first"
+#+end_src
+
+We can implement =map= in terms of =first=, =rest=, and =cons=.
+#+begin_src javascript
+var map = function (list, transform) {
+    if (list === null) {
+        return null;
+    } else {
+        return cons(transform(first(list)), map(rest(list), transform));
+    }
+}
+
+first(
+    map(node1, function (val) { return val + " mapped!"})
+); // => "first mapped!"
+#+end_src
+
+...and how it might work for an array:
+
+#+begin_src javascript
+var first = function (array) {
+    return array[0];
+}
+
+var rest = function (array) {
+    var sliced = array.slice(1, array.length);
+    if (sliced.length == 0) {
+        return null;
+    } else {
+        return sliced;
+    }
+}
+var cons = function (newValue, array) {
+    return [newValue].concat(array);
+}
+var list = ["Transylvania", "Forks, WA"];
+map(list, function (val) { return val + " mapped!" });
+// => ["Transylvania mapped!", "Forks, WA mapped!"]
+#+end_src
+
+*** Abstraction through Indirection
+=first= is able to work with different data strutures. It does this by having multiple, data structure-specific meanings. Indirection is what makes abstraction possible.
+
+Clojure has two constructs for defining polymorphic dispatch: the host platform's interface construct, and platform-independent protocols. It'll be covered in Chapter 13.
+
+Whenever Clojure expects a sequence, it calls the =seq= function on the data structure in question to obtain a data structure that allows for =first=, =rest=, and =cons=.
+
+#+begin_src clojure
+(seq '(1 2 3))
+(seq [1 2 3])
+(seq #{1 2 3})
+(seq {:name "Bill Compton" :occupation "Dead mopey guy"})
+#+end_src
+
+#+RESULTS:
+| (1 2 3)                                                 |
+| (1 2 3)                                                 |
+| (1 3 2)                                                 |
+| ([:name "Bill Compton"] [:occupation "Dead mopey guy"]) |
+
+=seq= always returns a value that looks and behaves like a list; you'd call this value a sequence. The seq of a map consists of two-element key-value vectors. That's why =map= treats your maps like lists of vectors!
+
+You can convert the seq back into a map by using =into= to stick the result into an empty map (we'll see =into= closely, later).
+
+#+begin_src clojure
+(into {} (seq {:a 1 :b 2 :c 3}))
+#+end_src
+
+#+RESULTS:
+| :a | 1 | :b | 2 | :c | 3 |
+
+As long as a data structure implements the sequence abstraction, it can use the extensive seq library, which includes such superstar functions as =reduce=, =filter=, =distinct=, =group-by=, and dozens more.
+
+** Seq Function Examples
+Clojure's seq library has a lot of useful functions.
+
+*** map
+Can do two new tasks: taking multiple collections as arguments and taking a collection of functions as an argument. It also highlights a common =map= pattern: using keywords as the mapping function.
+
+#+begin_src clojure
+(map inc [1 2 3])
+(map str ["a" "b" "c"] ["A" "B" "C"])
+;; almost as if it called...
+(list (str "a" "A") (str "b" "B") (str "c" "C"))
+#+end_src
+
+When you pass =map= multiple collections, the elements of the first collection will be passed as the first argument of the mapping function (=str=, in this case), the elements of the second collection will be passed as athe second argument, and so on. Just be sure that your mapping function can take a number of arguments equal to the number of collections you're passing to =map=.
+
+#+begin_src clojure
+(def human-consumption   [8.1 7.3 6.6 5.0])
+(def critter-consumption [0.0 0.2 0.3 1.1])
+(defn unify-diet-data
+  [human critter]
+  {:human human
+   :critter critter})
+
+(map unify-diet-data human-consumption critter-consumption)
+#+end_src
+
+#+RESULTS:
+| #'clojure-noob.core/human-consumption                                                                         |
+| #'clojure-noob.core/critter-consumption                                                                       |
+| #'clojure-noob.core/unify-diet-data                                                                           |
+| ({:human 8.1, :critter 0.0} {:human 7.3, :critter 0.2} {:human 6.6, :critter 0.3} {:human 5.0, :critter 1.1}) |
+
+You can also pass =map= a collection of functions. You could use this if you wanted to perform a set of calculations on different collections of numbers, like so:
+
+#+begin_src clojure
+(def sum #(reduce + %))
+(def avg #(/ (sum %) (count %)))
+(defn stats
+  [numbers]
+  (map #(% numbers) [sum count avg]))
+(stats [3 4 10])
+(stats [80 1 44 13 6])
+#+end_src
+
+#+RESULTS:
+| #'clojure-noob.core/sum   |
+| #'clojure-noob.core/avg   |
+| #'clojure-noob.core/stats |
+| (17 3 17/3)               |
+| (144 5 144/5)             |
+
+Here, the =stats= function iterates over a vector of functions, applying each function to =numbers=.
+
+You can also use =map= to retrieve that value associated with a keyword from a collection of map data structures. Because keywords can be used as functions, you can do this succinctly. An example:
+
+#+begin_src clojure
+(def identities
+  [{:alias "Batman" :real "Bruce Wayne"}
+   {:alias "Spider-Man" :real "Peter Parker"}
+   {:alias "Santa" :real "Your mom"}
+   {:alias "Easter Bunny" :real "Your dad"}])
+
+(map :real identities)
+#+end_src
+
+#+RESULTS:
+| #'clojure-noob.core/identities                       |
+| ("Bruce Wayne" "Peter Parker" "Your mom" "Your dad") |
+
+*** reduce
+Processes each element in a sequence to build a result. Here are a couple of other ways to use it that might not be obvious.
+
+The first is to transform a map's values, producing a new map with the same keys but with updated values. =reduce= treats the argument ={:max 30 :min 10}= as a sequence of vectors, like =([:max 30] [:min 10])=. Then, it starts with an empty map (the second argument), and builds it up using the first argument, an anonymous function.
+
+#+begin_src clojure
+(reduce (fn [new-map [key val]]
+          (assoc new-map key (inc val)))
+        {}
+        {:max 30 :min 10})
+
+;; it is as if it does...
+(assoc (assoc {} :max (inc 30))
+       :min (inc 10))
+#+end_src
+
+#+RESULTS:
+| :max | 31 | :min | 11 |
+
+Takeaway being, =reduce= is more flexible than it first appears. Whenever you want to derive /any/ new value from a seq-able data structure, =reduce= will usually be able to do what you need. If you want an exercise that will really blow your hair back, try implementing =map= using =reduce=, and then do the same for =filter= and =some= after you read about them later in this chapter.
+
+*** take, drop, take-while, and drop-while
+=take= and =drop= both take two arguments: a number and a sequence. =take= returns the first ~n~ elements of a sequence, whereas =drop= returns the sequence with the first ~n~ elements removed.
+
+#+begin_src clojure
+(take 3 [1 2 3 4 5 6 7 8 9 10])
+(drop 3 [1 2 3 4 5 6 7 8 9 10])
+#+end_src
+
+#+RESULTS:
+| (1 2 3)          |
+| (4 5 6 7 8 9 10) |
+
+Their cousins, =take-while= and =drop-while= are a bit mroe interesting. Each of them takes a /predicate funciton/ (whose return value is evaluated for either truth or falsity) to determine when it should stop taking or dropping. Suppose, for example, that you had a vector representing entries in your "food" journal.
+
+#+name: food-journal
+#+begin_src clojure
+(def food-journal
+  [{:month 1 :day 1 :human 5.3 :critter 2.3}
+   {:month 1 :day 2 :human 5.1 :critter 2.0}
+   {:month 2 :day 1 :human 4.9 :critter 2.1}
+   {:month 2 :day 2 :human 5.0 :critter 2.5}
+   {:month 3 :day 1 :human 4.2 :critter 3.3}
+   {:month 3 :day 2 :human 4.0 :critter 3.8}
+   {:month 4 :day 1 :human 3.7 :critter 3.9}
+   {:month 4 :day 2 :human 3.7 :critter 3.6}])
+#+end_src
+
+#+begin_src clojure
+(take-while #(< (:month %) 3) food-journal)
+(drop-while #(< (:month %) 3) food-journal)
+#+end_src
+
+#+RESULTS:
+| #'clojure-noob.core/food-journal                                                                                                                                                      |
+| ({:month 1, :day 1, :human 5.3, :critter 2.3} {:month 1, :day 2, :human 5.1, :critter 2.0} {:month 2, :day 1, :human 4.9, :critter 2.1} {:month 2, :day 2, :human 5.0, :critter 2.5}) |
+
+*** filter and some
+=filter= will return all elements of a sequence that test true fro a predicate function. First, will find all the journal entries where human consumption is less than 5 litres.
+
+#+begin_src clojure :noweb yes
+<<food-journal>>
+(filter #(< (:human %) 5) food-journal)
+#+end_src
+
+You might be wondering why we didn't just use =filter= in the =take-while= and =drop-while= examples earlier. Indeed, =filter= would work for that, too. Here we're grabbing the January and February data, just like in the take-while example.
+#+begin_src clojure :noweb yes
+<<food-journal>>
+(filter #(< (:human %) 5) food-journal)
+#+end_src
+
+This use is fine, but =filter= can end up processing all of your data, which isn't strictly necessary. Because the food journal is already sorted by date, we know that =take-while= will return the data we want without having to examine any of the data we won't need.
+
+Often, you want to know whether a collection contains any values that test true for a predicate function. The =some= function does that, returning the first truthy value returned by a predicate function.
+
+#+begin_src clojure :noweb yes
+<<food-journal>>
+(some #(> (:critter %) 5) food-journal)
+;; nil
+(some #(> (:critter %) 3) food-journal)
+#+end_src
+
+#+RESULTS:
+| #'clojure-noob.core/food-journal |
+| true                             |
+
+You don't have any food entries where you consumed more than five liters from critter sources but you do have at least one where you consume more than three liters. Notice that the return value in the second example is =true= and not the actual entry that produced the true value. The reason is that the anonymous function =#(> (:critter %) 3)= returns =true= or =false=. Here's how you could return the entry:
+
+#+begin_src clojure :noweb yes
+<<food-journal>>
+(some #(and (> (:critter %) 3) %) food-journal)
+#+end_src
+
+#+RESULTS:
+| #'clojure-noob.core/food-journal             |
+| {:month 3, :day 1, :human 4.2, :critter 3.3} |

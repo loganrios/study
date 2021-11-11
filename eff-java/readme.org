@@ -1,0 +1,32 @@
+#+TITLE: Effective Java Notes
+
+* Creating and Destroying Objects
+** Static Factory:
++ static factory methods have names, and are not required to create a new object when invoked.
++ Can return an object of any subtype of their return type
++ The class of the returned object can vary from call to call as a function of the input parameters
++ method names like from(), of(), valueOf(), getInstance(), etc.
++ classes without public or protected constructors cannot be subclassed
++ hard to find in documentation and apis
+
+** Builder Pattern:
++ Adds a sort of 'optional named parameters' to creating Java classes
++ Tends to work when there are four or more parameters
++ Works best when built from the beginning
+
+** Enforcing Singletons
++ static factory singletons allow you to change the internals of a singleton (say, allow one instance per thread) without changing its API.
++ a single-element enum type is often the best way to implement a singleton.
++ but you can't use this approach if your singleton must extend a superclass other than Enum (though you can declare an enum to implement interfaces)
+
+** Enforce Noninstantiability on static classes
++ Occasionally, you want to write classes that group static methods and static fields, e.g. ~java.lang.Math~ or ~java.util.Arrays~.
++ Don't abuse them in order to /not/ think in terms of objects.
++ Private Constructors prevent outside instantiation, and inside instantiation if you provide an ~AssertionError~.
++ As a side effect, this also prevents subclasses.
+
+** Prefer Dependency Injection over hardwiring resources
++ Do not use a singleton or static utility class to implement a class that depends on one or more underlying resources whose behavior affects that of the class, and do not have the class create these resources directly.
++ Instead, pass the resources (or factories to create them) into the constructor (or static factor (or builder)).
+
+** Avoid creating unnecessary objects

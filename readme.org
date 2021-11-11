@@ -1,0 +1,27 @@
+#+TITLE: Studyen a Programming for Great Good!
+
+Okay guys, I think it's official. I've bought too many books.
+
+| Title                                             | Folder    | Status      |
+|---------------------------------------------------+-----------+-------------|
+| Structure and Interpretation of Computer Programs | sicp      | hold        |
+| Getting Clojure                                   | get-clj   | in-progress |
+| Clojure for the Brave and True                    | brave-clj | in-progress |
+| Elixir in Action                                  | exs-ia    | hold        |
+| Java Concurrency in Practice                      | java-ccip | waitlist    |
+| The Art of Multiprocessor Programming             | multiproc | waitlist    |
+| Compilers: Principles, Techniques, and Tools      | dragon    | waitlist    |
+| Algorithms                                        | clsr      | waitlist    |
+| Grokking Algorithms                               | grok-algo | waitlist    |
+| The C Programming Language                        | c-pl      | hold        |
+| The Go Programming Language                       | go-pl     | hold        |
+| Effective Java                                    | eff-java  | hold        |
+| Haskell from First Principles                     | hs-ffp    | waitlist    |
+| Embedded Rust                                     | rs-embed  | waitlist    |
+| The Little Schemer                                | lil-scm   | waitlist    |
+| 57 Exercises for Programmers                      | ex57      | waitlist    |
+| Cracking the Coding Interview                     | ctci      | in-progress |
+| Head-First Design Patterns                        | hfdp      | hold        |
+| Practical Common Lisp                             | p-cl      | hold        |
+| Beautiful Racket                                  | b-rkt     | waitlist    |
+| Test-Driven Development with Embedded C           | tddec     | hold        |

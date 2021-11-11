@@ -1,0 +1,1335 @@
+#+TITLE: Getting Clojure
+#+author: logan rios
+
+Because if we're struggling with one textbook, the best thing to do is to buy another immediately afterward, right?
+
+* Hello, Clojure
+** The Very Basics
+=;= comments are used when they annotate a line of code on the same line, while =;;= is used when comments are on their own.
+
+#+begin_src clojure
+(println "Hello Gang")
+(str "Clo" "jure")
+(str "Hello," " " "world" "!")
+(str 3 " " 2 " " 1 " Blast off!")
+(println true)
+(println false)
+(println "Nobody's home: " nil)
+(println "We can print many things: " true false nil)
+#+end_src
+
+#+RESULTS:
+| "Clojure"          |
+| "Hello, world!"    |
+| "3 2 1 Blast off!" |
+
+We'll take a look at Clojure's syntax more in Read and Eval. For now, let's just note that Clojure syntax for making something happen--such as calling a function--is to wrap the something in round parentheses. (Logan: did you just mansplain s-expressions to me?)
+
+** Arithmetic
+In Clojure, everything is of the structure =(verb argument argument argument...)=. Luckily, the basic math operators take a variable numver of arguments.
+
+#+begin_src clojure
+(+ 1900 84)
+(* 16 124)
+(- 2000 16)
+(/ 25792 13)
+(/ (+ 1984 2010) 2)
+(+ 1000 500 500 1)
+(- 2000 10 4 2)
+#+end_src
+
+#+RESULTS:
+| 1984 |
+| 1984 |
+| 1984 |
+| 1984 |
+| 1997 |
+| 2001 |
+| 1984 |
+
+There is a twist when it comes to the division. Clojure has a built-in /ratio/ data type. To get the familiar integer division behavior, you need to use the =quot= function. There are also floating points, and a general set of numeric promotions.
+
+=def= takes a symbol and a value. The value you supply gets evaluated, so it can be any expression. Clojure by convention uses /kebab case/, where words are separated by dashes. =def= is great when you're just playing around in the REPL, but it's not the direct analog of traditional variable assignment.
+
+** A Function of Our Own
+#+begin_src clojure
+(defn hello-world [] (println "Hellgang!"))
+(hello-world)
+(defn hell-world []
+  (println "Hell gang 2"))
+#+end_src
+
+#+RESULTS:
+: #'user/hello-world
+
+Clojure mostly ignores whitespace, but the programmers do have opinions about whitespace. By convention, you can either write a short function on a single line or spread it out over a couple of lines as we did in the last example. Clojure programmers also have strong opinions about indentation: each level is done with two spaces.
+
+Writing a function with a parameter or two is also straightforward: just put the parameter names in the brackets and then use them inside the function body.
+
+#+begin_src clojure
+(defn say-welcome [what]
+  (str "Welcome to " what))
+(say-welcome "Clojure")
+#+end_src
+
+#+RESULTS:
+| #'user/say-welcome   |
+| "Welcome to Clojure" |
+
+#+begin_src clojure
+(defn average [a b]
+  (/ (+ a b) 2.0))
+(average 5.0 10.0)
+#+end_src
+
+#+RESULTS:
+| #'user/average |
+|            7.5 |
+
+Clojure never requires you to sprinkle commas in when you're writing a sequence of items such as the parameter list of a function. Notice that there is also no =return= statement--functions just return whatever they compute--more specifically, the /last/ thing computed by the function.
+
+#+begin_src clojure
+(defn chatty-average [a b]
+  (println "chatty-average function called")
+  (println "** first argument:" a)
+  (println "** second argument:" b)
+  (/ (+ a b) 2.0))
+(chatty-average 10 20)
+#+end_src
+
+#+RESULTS:
+| #'user/chatty-average |
+|                  15.0 |
+
+Also note that there are no type declarations, nothing stating that =a= and =b= must now and forever be numbers. In the great 'static vs. dynamic typing' trade-off, Clojure has chosen the flexibility and terseness of dynamic typing.
+
+** In the Wild
+#+property: header-args :tangle gc/blottsbooks/src/blottsbooks/core.clj
+Use =lein new app blottsbooks= to get your project structure going.
+
+#+begin_src clojure
+(ns blottsbooks.core
+  (:gen-class))
+
+(defn -main
+  "I don't do a whole lot, yet."
+  [& args]
+  (println "Hellgang!"))
+#+end_src
+
+#+RESULTS:
+: #'blottsbooks.core/-main
+
+The main function of a Clojure program, the one that gets run to kick off the program, is always called =-main=. To see this in action, we can replace the =-main= with our book store greeting code. Here's the whole thing.
+
+#+begin_src clojure
+(ns blottsbooks.core
+  (:gen-class))
+
+(defn say-welcome [what]
+  (println "Welcome to" what "!"))
+
+(defn -main []
+  (say-welcome "Blotts Books"))
+
+(-main)
+#+end_src
+
+#+RESULTS:
+| #'blottsbooks.core/say-welcome |
+| #'blottsbooks.core/-main       |
+
+You can technically /declare/ a function before you use it, but you should generally avoid this unless you're in a sticky situation like mutually recursive functions. Also, be aware that =def= and =defn= draw from the same well of names. Last =def= or =defn= will always win.
+
+** Staying out of trouble
+Let's make some blunders.
+
+#+begin_src clojure
+(/ 100 0)
+(catty-average)
+(+ (* 2 2) 10)
+#+end_src
+
+#+RESULTS:
+| class java.lang.ArithmeticException           |
+| class clojure.lang.Compiler$CompilerException |
+| 14                                            |
+
+Generally the first line of the stack trace is what is most useful, even if the error messages themselves are long. When exceptions go flying, you'll frequently see Java leaking through. Don't panic. Extra closing parentheses usually throw a =RuntimeException: Unmatched delimiter: )=. However, if you forget a closing parenthesis, the REPL will wait patiently for you to complete the thought by supplying that final parenthesis.
+
+Clojure functions are themselves values. See how:
+#+begin_src clojure
+(defn average [x y] (/ (+ x y) 2))
+average
+#+end_src
+
+#+RESULTS:
+| #'blottsbooks.core/average          |
+| #function[blottsbooks.core/average] |
+
+There is a deeper reason for why this is the case, but the bottom line is that if you forget a parenthesis and you start seeing =#function= instead of your expected value, you'll know you missed a paren somewhere. If you do get frustrated with all the parens, just be patient. Yes, the syntax is odd, but it's also simple: before you know it, all them parens will seem like old friends.
+
+* Vectors and Lists
+** One thing after another
+
+#+begin_src clojure
+[1 2 3 4]
+[1 "two" 3 "four"]
+[true 3 "four" 5]
+[0 [1 [true 3 "four" 5] 6] 7]
+#+end_src
+
+#+RESULTS:
+| [1 2 3 4]                     |
+| [1 "two" 3 "four"]            |
+| [true 3 "four" 5]             |
+| [0 [1 [true 3 "four" 5] 6] 7] |
+
+** A toolkit of functions
+The =vector= function takes any number of any kind of argument and wraps a vector around those arguments.
+
+#+name: novels
+#+begin_src clojure
+(def novels ["Emma" "Coma" "War and Peace"])
+#+end_src
+
+#+begin_src clojure :noweb yes
+<<novels>>
+(vector true 3 "four" 5)
+(count novels)
+(first novels)
+(rest novels)
+(rest (rest novels))
+(rest ["Ready Player One"])
+#+end_src
+
+#+RESULTS:
+| #'blottsbooks.core/novels |
+| [true 3 "four" 5]         |
+| 3                         |
+| "Emma"                    |
+| ("Coma" "War and Peace")  |
+| ("War and Peace")         |
+| ()                        |
+
+So why does the =rest= function return =("Coma" "War and Peace")= instead of the expected vector? It's because it actually returns a sort of generic collection, called a /sequence/.
+
+#+begin_src clojure
+(def year-books ["1491" "April 1865" "1984" "2001"])
+(def third-book (first (rest (rest year-books))));; => #'user/third-book
+(nth year-books 2);; => "1984"
+(year-books 2);; => "1984"
+#+end_src
+
+#+RESULTS:
+| #'blottsbooks.core/year-books |
+| #'blottsbooks.core/third-book |
+| "1984"                        |
+
+Keep in mind that none of these operations change the original vector in any way. This is something very fundamental about Clojure: with a few exceptions, Clojure is built on a mountain of immutability. Generally, once you create a data structure, there is no way to modify it.
+
+** Growing Your Vectors
+You can't change an existing vector, but you can make a new, slightly longer vector. One way to get a bigger vector is with the =conj= function, which will append. =cons=, on the other hand, will prepend.
+
+#+begin_src clojure :noweb yes
+<<novels>>
+(conj novels "Carrie")
+(cons "Carrie" novels)
+#+end_src
+
+#+RESULTS:
+| #'blottsbooks.core/novels                |
+| ["Emma" "Coma" "War and Peace" "Carrie"] |
+| ("Carrie" "Emma" "Coma" "War and Peace") |
+
+Weird to note that =conj= returns a vector, while =cons= once again returns a seq. Hmm...
+
+** Lists
+#+begin_src clojure
+'(1 2 3)
+'(1 2 3 "four" 5 "six")
+'(1 2.0 2.9999 "four" 5.001 "six")
+'([1 2 ("a" "list" "inside a" "vector")] "inside" "a" "list")
+(list 1 2 3 "four" 5 "six")
+#+end_src
+
+#+RESULTS:
+| (1 2 3)                                                      |
+| (1 2 3 "four" 5 "six")                                       |
+| (1 2.0 2.9999 "four" 5.001 "six")                            |
+| ([1 2 ("a" "list" "inside a" "vector")] "inside" "a" "list") |
+| (1 2 3 "four" 5 "six")                                       |
+
+The single-quote tells Clojure that what follows is data, not executable. You only need one quote no matter how deeply your lists are nested. The only time you won't need a single-quote is when you're working with the empty list =()=.
+
+Yes, it is hard to tell the difference between a list and those sequence things. You can do many of the same things with a list that you can do with a vector:
+
+#+begin_src clojure
+(def poems '("Iliad" "Odyssey" "Now We Are Six"))
+(count poems)
+(first poems)
+(rest poems)
+(nth poems 2)
+#+end_src
+
+#+RESULTS:
+| #'blottsbooks.core/poems     |
+| 3                            |
+| "Iliad"                      |
+| ("Odyssey" "Now We Are Six") |
+| "Now We Are Six"             |
+
+** Lists vs. Vectors
+Under the hood, these are implemented differently. Lists are linked lists, while Vectors are more like traditional arrays with contiguous memory.
+
+Getting to the 654th item of a vector is wicked fast, since Clojure does address arithmetic behind the scenes. Getting that same item out of a list involves running down the chain of all the previous items one at a time. However, it is much cheaper to tack an item onto the front of a list over a vector.
+
+This manifests as the differing behavior of =conj= when it comes to lists and vectors--it'll put the new item at the beginning of the list, but at the end of the vector, like so:
+
+#+begin_src clojure
+(def poems '("Iliad" "Odyssey" "Now We Are Six"))
+(conj poems "Jabberwocky")
+(def vector-poems ["Iliad" "Odyssey" "Now We Are Six"])
+(conj vector-poems "Jabberwocky")
+#+end_src
+
+#+RESULTS:
+| #'blottsbooks.core/poems                           |
+| ("Jabberwocky" "Iliad" "Odyssey" "Now We Are Six") |
+| #'blottsbooks.core/vector-poems                    |
+| ["Iliad" "Odyssey" "Now We Are Six" "Jabberwocky"] |
+
+** Staying out of trouble
+The main way to trip up with Clojure's vectors and lists is to forget just how immutable they are. For example, if you start with this, and then try to add a new book, you have done nothing.
+
+#+name: novels-conj
+#+begin_src clojure
+(def novels ["Emma" "Coma" "War and Peace"])
+(conj novels "Jaws")
+#+end_src
+
+#+RESULTS:
+| #'user/novels                          |
+| ["Emma" "Coma" "War and Peace" "Jaws"] |
+
+...well, not precisely nothing. You started with the three-element =novels= vector, then you created a new vector with four elements. But then, you threw that new vector away! Leaving the universe pretty much as you found it. To do something useful, you need to grab the new, four-element vector, perhaps by binding it to a new symbol. Exactly the same logic applies to most other Clojure data structures, including lists.
+
+#+begin_src clojure :noweb yes
+<<novels-conj>>
+(def more-novels (conj novels "Jaws"))
+(def novels '("Emma" "Coma" "War and Peace"))
+(conj novels "Jaws")
+#+end_src
+
+#+RESULTS:
+| #'user/novels                          |
+| ["Emma" "Coma" "War and Peace" "Jaws"] |
+| #'user/more-novels                     |
+| #'user/novels                          |
+| ("Jaws" "Emma" "Coma" "War and Peace") |
+
+Generally this causes newcomers to worry about performance--on the surface, it seems like a lot of useless copying. The truth is that under the hood, vectors store their data in chunks, organized in a shallow tree. Breaking up the data into chunks means that when it comes time to make an almost-the-same copy, Clojure reuses most of the chunks as-is
+
+The same holds true for all of Clojure's data structures--they are optimized under-the-hood to support fast creation of almost-the-same copies. A data structure with this quality is described as /persistent/, which is a new definition of the term for most computer scientists.
+
+** In the Wild
+Most Clojure programmers overwhelmingly choose the vector over the list for sequential data structure needs. Vectors are found at the heart of just about every Clojure program.
+
+#+begin_src clojure
+;; adapted from the Clostache HTML templating library
+(defn escape-html [string]
+  (replace-all string [["&" "&amp;"]
+                       ["\"" "&quot;"]
+                       ["<" "&lt;"]
+                       [">" "&gt;"]]))
+#+end_src
+
+Let's look at some weird (but advanced!) Clojure code that uses vectors.
+
+#+begin_src clojure
+(defroutes routes
+  [[["/" {:get home-page} ^:interceptors [bootstrap/html-body]
+     ["/hiccup" {:get hiccup-page}]
+     ["/enlive" {:get enlive-page}]
+     ["/mustache" {:get mustache-page}]
+     ["/stringtemplate" {:get stringtemplate-page}]
+     ["/comb" {:get comb-page}]]]])
+#+end_src
+
+This bit of code contains a lot of features that we haven't covered yet. =defroutes= is a macro, =^:interceptors= is metadata, and the curly brackets are maps. If you skip over all that, it's clear what's going on if you've ever seen a web application: the code is using the vectors to specify what the application should do when a =get= request comes on various URL paths, e.g., do /this/ if someone points their browser at =/hiccup= and /that/ if they hit =/enlive=.
+
+While Clojure programmers mostly rely on vectors, lists do get a fair bit of use, especially in situations where you want to build your sequence by appending new items to the front as opposed to the back. Certainly it is no great leap to imagine =defroutes= with lists instead of vectors, but when there aren't great algorithmic issues at stake, Clojurists tend to reach for the square brackets.
+
+You may be noticing that lists and code are looking pretty similar. Don't worry--that's very much on purpose.
+
+** Wrapping up
+Basically, vectors are almost an array.
+
+* Maps, Keywords, and Sets
+** This Goes with That
+Time to associate arbitrary keys with equally arbitrary values. This is a =map=.
+
+#+begin_src clojure
+{"title" "Oliver Twist" "author" "Dickens" "published" 1838}
+(hash-map "title" "oliver twist"
+          "author" "Dickens"
+          "published" 1838)
+(def book {"title" "Oliver Twist"
+           "author" "Dickens"
+           "published" 1838})
+(get book "published")
+(book "published")
+#+end_src
+
+#+RESULTS:
+| {"title" "Oliver Twist", "author" "Dickens", "published" 1838} |
+| {"author" "Dickens", "published" 1838, "title" "oliver twist"} |
+| #'user/book                                                    |
+| 1838                                                           |
+| 1838                                                           |
+
+While a map will let you use anything as a key, usually Clojurists use keywords as keys. Syntactically, these start with a colon and then follow the same rules as symbols.
+
+#+begin_src clojure
+:title
+:author
+:published
+:word-count
+:preface&introduction
+:chapter-1-and-2
+#+end_src
+
+Keywords can be thought of as a subspecies of strings. Strings are data, while keywords tend to be part of the program itself, and meaningful to people who read code. If you need a label to represent something in your code, perhaps the state of your finite state machine, or whether you want your logger to include the =:debug= information, use a keyword.
+
+Technically, keywords are interned strings, similar to symbols in Ruby (Logan: called it!), and distant cousins to the individual items that go into enumerated types in other languages.
+
+#+name: booktwist
+#+begin_src clojure
+(def book
+  {:title "Oliver Twist" :author "Dickens" :published 1838})
+#+end_src
+
+#+begin_src clojure :noweb yes
+<<booktwist>>
+(str "Title: " (book :title))
+(str "By: " (book :author))
+(str "Published: " (book :published))
+
+;; this works!
+(book :title)
+(:title book)
+#+end_src
+
+#+RESULTS:
+| #'user/book           |
+| "Title: Oliver Twist" |
+| "By: Dickens"         |
+| "Published: 1838"     |
+| "Oliver Twist"        |
+| "Oliver Twist"        |
+
+Note that the second form, where we use a keyword as the function to extract a value, is the most common way to get a value from a map.
+
+** Changing your map without changing it
+You can't modify a map, but you can make a new map that is a modified copy of an existing map. =assoc= is easy. Supply the original map, along with a key and value. You can =dissoc= as well, but keep in mind that it will quietly ignore any keys that aren't actually in the map.
+
+#+begin_src clojure :noweb yes
+<<booktwist>>
+(assoc book :page-count 362)
+(assoc book :page-count 362 :title "War & Peace")
+(dissoc book :published)
+(dissoc book :title :author :published)
+(dissoc book :paperback :illustrator :favorite-zoo-animal)
+#+end_src
+
+#+RESULTS:
+| #'user/book                                                                  |
+| {:title "Oliver Twist", :author "Dickens", :published 1838, :page-count 362} |
+| {:title "War & Peace", :author "Dickens", :published 1838, :page-count 362}  |
+| {:title "Oliver Twist", :author "Dickens"}                                   |
+| {}                                                                           |
+| {:title "Oliver Twist", :author "Dickens", :published 1838}                  |
+
+#+begin_quote
+Vectors and maps have a lot in common! They both associate keys with values. Weirdly, this means that =assoc= and =dissoc= also work on vectors.
+#+end_quote
+
+** Other handy map function
+Get a hold of all the keys in a map with =keys=. Note that there is no guarantee about the order of the keys. You can also get all the values out of a map with =vals=. Note again that commas are whitespace.
+
+** Sets
+A value either is or is not a member of a set. A value can only be set once, so if you repeat a value in a set literal, you'll get an error.
+
+#+name: genres-authors
+#+begin_src clojure
+(def genres #{:sci-fi :romance :mystery})
+(def authors #{"Dickens" "Austen" "King"})
+#+end_src
+
+#+RESULTS:
+| #'user/genres                            |
+| #'user/authors                           |
+| class java.lang.IllegalArgumentException |
+
+Sets also have their own ideas about the order of the elements. The set that you wrote as =#{:sci-fi :romance :mystery}= is liable to come back to you in a completely different order. Since sets are all about membership, the main thing you can do with them is discover if this or that value is in the set. You can check set membership with the =contains?= function, which returns either true or false.
+
+#+begin_src clojure :noweb yes
+<<genres-authors>>
+(contains? authors "Austen")
+(contains? genres "Austen")
+(authors "Austen")
+(genres :historical)
+(:sci-fi genres)
+(:historical genres)
+#+end_src
+
+#+RESULTS:
+| #'user/genres  |
+| #'user/authors |
+| true           |
+| false          |
+| "Austen"       |
+| :sci-fi        |
+
+You can create a larger set from an existing set with =conj=. It is not an error to =conj= a value into a set a second time, but it is a waste. You can remove elements from a set with =disj= (note that 'remove' means 'make a second, smaller set').
+
+#+begin_src clojure :noweb yes
+<<genres-authors>>
+(def more-authors (conj authors "Clarke"))
+(conj more-authors "Clarke")
+(disj more-authors "King")
+#+end_src
+
+#+RESULTS:
+| #'user/genres                         |
+| #'user/authors                        |
+| #'user/more-authors                   |
+| #{"King" "Dickens" "Clarke" "Austen"} |
+| #{"Dickens" "Clarke" "Austen"}        |
+
+** In the wild
+Maps are the Swiss army knives of Clojure programming. Any time you need to bundle together some related data items into a unified whole, one of your first thoughts should be to use a map. For example, Clojure does this in the =clojure.java.jdbc= library. The connection requires several pieces of information, which you supply with a map.
+
+#+begin_src clojure
+(require 'clojure.java.jdbc)
+(def db {:dbtype "derby" :dbname "books"})
+(clojure.java.jdbc/query db ["select * from books"])
+;; note that 'db' is a map that represents our connection!
+(def db {:dbtype "MySQL"
+         :dbname "books"
+         :user "russ"
+         :password "noneofyourbeeswax"})
+#+end_src
+
+Along with the connection information, =clojure.java.jdbc= also returns query results in maps. So, if you had a simple-minded table called 'books' in the database, you would see something like this come back from the =query= function:
+
+#+begin_src clojure
+({:id 10, :title "Oliver Twist", :author "Dickens"}
+ {:id 20, :title "Emma", :author "Austen"})
+#+end_src
+
+A typical bit of Clojure software, indeed: maps go in and maps come out.
+
+Sets are not nearly as common as maps, but they are not rare. =clojure.java.jdbc= also contains this expression:
+
+#+begin_src clojure
+(#{"derby" "h2" "hsqldb" "sqlite"} subprotocol)
+#+end_src
+
+This is a set, used as a function, which will return the value only if =subprotocol= is one of the elements in the set. Otherwise, it will return =nil=. In essence this is a test to see if the value bound to =subprotocol= is the name of a database that we recognize.
+
+The clear popularity winner is the keyword: it is hard to write any significant Clojure code without sprinkling in some keywords. In the source code of the Leiningen competitor boot, you will come across this:
+
+#+begin_src clojure
+(defn resolve-dependencies
+  [{:keys [checkouts] :as env}]
+  (let [checkouts (set (map first checkouts))]
+    (->> [:dependencies :repositories :local-repo :offline? :mirrors :proxy]
+         (select-keys env)
+         resolve-dependencies-memoized*
+         ksort/topo-sort
+         (keep
+          (fn [[p :as x]] (when-not (checkouts p)
+                           {:dep x :jar (dep->path x)}))))))
+#+end_src
+
+For those counting, that's 11 keywords in 10 lines of code. Nice.
+
+** Staying out of trouble
+Keep in mind that keywords are not strings, and are certainly not interchangeable.
+
+Remember how lookups return =nil= if no associated value is matched with the key? Well, what if someone defines a key in a map that is associated with the value =nil=? Then you can't tell whether the map doesn't have the field, or if its value is just =nil=.
+
+#+begin_src clojure
+(def anonymous-book {:title "The arabian nights" :author nil})
+(:author anonymous-book)
+(contains? anonymous-book :title)
+(contains? anonymous-book :author)
+(contains? anonymous-book :favorite-color)
+#+end_src
+
+#+RESULTS:
+| #'user/anonymous-book |
+| true                  |
+| true                  |
+| false                 |
+
+Therefore, if you need to know if a key exists in a map, reach for =contains?=. This also applies to sets.
+
+Note that the language is also happy to treat maps like ordinary sequences of values, just like lists or vectors. This is a feature, but it is weird at first.
+
+#+begin_src clojure
+(def book {:title "Hard Times"
+           :author "Dickens"
+           :published 1838})
+(first book)
+(rest book)
+(count book)
+#+end_src
+
+#+RESULTS:
+| #'user/book                             |
+| [:title "Hard Times"]                   |
+| ([:author "Dickens"] [:published 1838]) |
+| 3                                       |
+
+Again, no promises about the order of maps! Also note that in keyword-lookup functions that use the keyword as the first item in a list, the keywords aren't just pretending to be functions--they /are/ functions.
+
+* Logic
+** The fundamental if
+It is very boring in Clojure. One expression means nothing, while a second expression represents the 'else' branch.
+
+#+begin_src clojure
+(defn print-greeting [preferred-customer]
+  (if preferred-customer
+    (println "Welcome back to Blott's Books!")
+    (println "Welcome to Blott's Books!")))
+#+end_src
+
+Notice that Clojure =if= is a value-returning expression. Thus, if preferred customers get free shipping while everyone else pays 10 percent, we might come up with something like this.
+
+#+begin_src clojure
+(defn shipping-charge [preferred-customer order-amount]
+  (if preferred-customer
+    0.00
+    (* order-amount 0.10)))
+#+end_src
+
+The value returned by an =if= is the value returned from the last expression evaluated in the =if=. If you have a one-legged =if=, with no else expression, and the condition is false, then the whole =if= will evaluate to =nil=. Clojure programmers usually write short =if= expression on a single line.
+
+#+begin_src clojure
+(if preferred-customer
+  "So nice to have you back!")
+
+;; Clojurists usually one-line these shorter ones.
+(if preferred-customer "So nice to have you back!")
+#+end_src
+
+** Asking questions
+Being able to branch on an implicit =true= or =false= is only half of what makes =if= such a workhorse. The other half is being able to ask the questions that evaluate to a Boolean. Equality, luckily, usually works as you'd expect.
+
+#+begin_src clojure
+(= 1 1)
+(= 2 (+ 1 1))
+(= "Anna Karenina" "Jane Eyre")
+(= "Emma" "Emma")
+(= (+ 2 2) 4 (/ 40 40) (* 2 2) (- 5 1))
+(= 2 2 2 2 2 2 2 2 2 2 3 2 2 2 2 2 2 2)
+;; note the 3 above
+(not= "Anna Karenina" "Jane Eyre")
+(not= "Anna Karenina" "Anna Karenina")
+#+end_src
+
+#+RESULTS:
+| true  |
+| true  |
+| false |
+| true  |
+| false |
+| false |
+| true  |
+| false |
+
+There are a variety of /is this a that?/ functions.
+
+#+begin_src clojure
+(number? 1984)
+(number? "Anna Karenina")
+(string? "Anna Karenina")
+(keyword? "Anna Karenina")
+(keyword? :anna-karenina)
+(map? :anna-karenina)
+(map? {:title 1984})
+(vector? 1984)
+(vector? [1984])
+#+end_src
+
+#+RESULTS:
+| true  |
+| false |
+| true  |
+| false |
+| true  |
+| false |
+| true  |
+| false |
+| true  |
+
+There are also the other usual cast of characters, such as the =not= function, such that =(not true)= is false, and =(not false)= is true. There are also =and= and =or= for assembling large boolean expressions:
+
+#+begin_src clojure
+(defn shipping-surcharge? [preferred-customer express oversized]
+  (and (not preferred-customer) (or express oversized)))
+#+end_src
+
+Note that =and= and =or= do short-circuit evaluation.
+
+** Truthy and Falsy
+The language is willing to treat any value as a boolean. In an =if= statement, only =false= and =nil= are treated as false, and everything else is treated as true. Empty collections all evaluate to =true= as well, so reach for the =empty?= method if you must.
+
+** Do and When
+One wrinkle with =if= is that you are limited to one expression for true and one expression for false. We can use =do=, since that is what Clojure calls its /group a bunch of expressions into a single expression/ construct.
+
+#+begin_src clojure
+(do
+  (println "This is four expressions")
+  (println "All grouped as one")
+  (println "It prints some stuff, and then evaluates to 44.")
+  44)
+#+end_src
+
+Armed with =do=, we can flesh out our simple, previous =if=.
+
+#+begin_src clojure
+(defn shipping-charge [preferred-customer order-amount]
+  (if preferred-customer
+    (do
+      (println "Preferred customer, free shipping!")
+      0.0)
+    (do
+      (println "Regular customer, charging for shipping...")
+      (* order-amount 0.10))))
+#+end_src
+
+Clojure also sports a variant of =if= called =when=, which doesn't have an else (or falsey) leg, but support multiple return statements without needing the =do=:
+
+#+begin_src clojure
+(when preferred-customer
+  (println "Hello returning customer!")
+  (println "Welcome to Blott's Books!"))
+#+end_src
+
+** Dealing with multiple conditions
+Technically, all you need is =if=, but it looks pretty ugly to use a lot of them. (Logan: agreed!)
+
+#+begin_src clojure
+(defn shipping-charge [preferred-customer order-amount]
+  (if preferred-customer
+    0.0
+    (if (< order-amount 50.0)
+      5.0
+      (if (< order-amount 100.0)
+        10.0
+        (* 0.1 order-amount)))))
+#+end_src
+
+(Logan: and yet it still doesn't look as bad as Java/C++...)
+
+Fortunately, Clojure has =cond=. A partial implementation:
+
+#+begin_src clojure
+(defn shipping-charge [preferred-customer order-amount]
+  (cond
+    preferred-customer 0.0
+    (< order-amount 50.0) 5.0
+    (< order-amount 100.0) 10.0))
+#+end_src
+
+=cond= takes pairs of expressions, each pair made up of a predicate expression and a value expression. If the predicate is false, =cond= goes on to the next pair. If the predicate is true, then =cond= will evaluate the value expression and return that. However, we now can't handle orders of $100 or more properly--=cond= will return a =nil= if no predicates are true.
+
+#+begin_src clojure
+(cond
+  preferred-customer 0.0
+  (< order-amount 50.0) 5.0
+  (< order-amount 100.0) 10.0
+  (>= order-amount 100.0 (* 0.1 order-amount)))
+#+end_src
+
+Alternatively, we could utilize an =:else= calse.
+
+#+begin_src clojure
+(defn shipping-charge [preferred-customer order-amount]
+  (cond
+    preferred-customer 0.0
+    (< order-amount 50.0) 5.0
+    (< order-amount 100.0) 10.0
+    :else (* 0.1 order-amount)))
+#+end_src
+
+Notice that the =:else= clause is not new special =cond= syntax. It's just another predicate/expression pair. Think about it: if none of the other pairs are truthy, decide that since :else is neither false nor nil it must be truthy, and return 10% of the order amount. (In principle we could use any truthy value instead of =:else=, say, =:default=, =true=, or ="Whatever"=. We're only using it because of convention.)
+
+Along the lines of =cond= we have the less powerful but still useful =case=, which lets your code turn this way or that based on a single value.
+
+#+begin_src clojure
+(defn customer-greeting [status]
+  (case status
+    :gold      "Welcome, welcome, welcome back!"
+    :preferred "Welcome back!"
+               "Welcome to Blott's Books!"))
+#+end_src
+
+A couple things to remember about =case=: first, the last catch-all expression is optional, but if you do leave it out the =case= will generate an error if none of the constants match. Second, the constants /must/ be constant. The constants in =case= expressions are one of the few places where an expression does not get evaluated.
+
+** Throwing and Catching
+Sometimes the flow of execution reaches out uand takes control of its own accord. Exceptions are your program's way of telling the world that something is /very/ wrong.
+
+#+begin_src clojure
+(defn publish-book [book]
+  (when (not (:title book))
+    (throw
+     (ex-info "A book needs a title!" {:book book}))))
+
+(try
+  (publish-book book)
+  (catch ArithmeticException e (println "Math problem"))
+  (catch StackOverflowError e (println "Unable to publish...")))
+
+#+end_src
+
+The =ex-info= function takes a string describing the problem and a (possibly empty) map containing any other pertinent information. And to complete the circle, if you want to catch an exception generated by ex-info you will need to look for exceptions of type =clojure.lang.ExceptionInfo=.
+
+** In the Wild
+The reason for these names is because they're interoperating into lower-level Java code.
+
+#+begin_src clojure
+(when (real-directory? f)
+  (doseq [child (.listFiles f)]
+    (delete-file-recursively child silently)))
+
+(if (.isDirectory entry)
+  (.mkdirs f)
+  (do (.mkdirs (.getParentFile f))
+      (io/copy (.getInputStream jar entry) f)))
+#+end_src
+
+Surprisingly, the if-this-then-do-that use case of =if= is not all that common in Clojure. What you find instead is =if=, =when=, and =cond= used to compute a value.
+
+#+begin_src clojure
+(def task 3)
+(if (vector? task) task [task])
+(def task-vector (if (vector? task) task [task]))
+(defn ensure-task-is-a-vector [task]
+  (if (vector? task) task [task]))
+#+end_src
+
+When =if= is used this way--which it commonly is--Clojure's =if= is a lot like the ternary expressions that you find in Java or C. If this is truthy I want this value; otherwise, I want this other value.
+
+Korma is "Tasty SQL for Clojure".
+#+begin_src clojure
+(defn str-value [v]
+  (cond
+    (map? v) (map-val v)
+    (keyword? v) (field-str v)
+    (nil? v) "NULL"
+    (coll? v) (coll-str v)
+    :else (parameterize v)))
+
+(case (:type query)
+  :insert (update-in query [:values] #(map prep-fn %))
+  :update (update-in query [:set-fields] prep-fn)
+  query)
+#+end_src
+
+** Staying out of trouble
+There's... a lot of weirdness that Clojure has around its Boolean logic operators, and a lot of Clojure code is written around this strange behavior. Consider the following:
+
+#+begin_src clojure
+(and true 1984)
+(and 2001 "Emma")
+(and 2001 nil "Emma")
+#+end_src
+
+#+RESULTS:
+|   1984 |
+| "Emma" |
+
+The point of the behavior of =and= only makes sense if you look at it from the truthy/falsey point of view. Given this, you should avoid testing for true or false explicitly. For example, the condition part of this =if=:
+
+#+begin_src clojure
+(if (= (some-predicate? some-argument) true)
+  (some-other-function))
+#+end_src
+
+This isn't just extra wordy; it's /wrong/. The author of =some-predicate?=--like the author of =and=--may have decided to return somethin gother than true to indicate truthyness. If it does, then this =if= will miss it.
+
+* More Capable Functions
+** One Function, Different Parameters
+#+name: greeting
+#+begin_src clojure
+(defn greet
+  ([to-whom] (str "Welcome to Blott's Books, " to-whom))
+  ([message to-whom] (str message to-whom)))
+#+end_src
+
+#+RESULTS: greeting
+: #'user/greet
+
+The =greet= function will accept either one or two parameters. The single-argument version works like our original =say-welcome=, while the two-argument rendition takes a message along with the recipient. Notice how =greet= is essentially two function definitions in one, each with its own parameter list and body, each one wrapped in yet another set of parens.
+
+#+begin_src clojure :noweb yes
+<<greeting>>
+(greet "Dolly")
+(greet "Howdy" "Stranger")
+#+end_src
+
+#+RESULTS:
+| #'user/greet                      |
+| "Welcome to Blott's Books, Dolly" |
+| "HowdyStranger"                   |
+
+You can call different arity from each other.
+
+#+begin_src clojure
+(defn greet
+  ([to-whom] (greet "Welcome to Blott's Books, " to-whom))
+  ([message to-whom] (println message to-whom)))
+#+end_src
+
+The idea of the 'filling in the defaults' technique is that you have one arity--usually the one with the most arguments--that really does something, and all the other arities call that main version, filling in missing parameters as they go.
+
+** Arguments with Wild Abandon
+Multi-arity functions are fine for functions like =greet=, but what if you need to take an indefinite number of arguments?
+
+#+begin_src clojure
+(defn print-any-args [& args]
+  (str "My arguments are: " args))
+(print-any-args 7 true nil)
+(defn new-first-argument [x & args] x)
+(new-first-argument :hell :gang :is :here)
+#+end_src
+
+#+RESULTS:
+| #'user/print-any-args         |
+| "My arguments are: (7 true )" |
+| #'user/new-first-argument     |
+| :hell                         |
+
+** Multimethods
+Multi-arity and variadic functions are great for those situations where you want to build functions that are less picky about the number of arguments they will accept. Sometimes you wan tto be able to vary your function's behavior based on some other aspect of the values that get passed to it.
+
+#+begin_src clojure
+{:title "War and Peace" :author "Tolstoy"}
+{:book "Emma" :by "Austen"}
+["1984" "Orwell"]
+(defn normalize-book [book]
+  (if (vector? book)
+    {:title (first book) :author (second book)}
+    (if (contains? book :title)
+      book
+      {:title (:book book) :author (:by book)})))
+#+end_src
+
+There's nothing wrong with this just-do-it approach, but what if suddenly had to deal with a whole blizzard of book formats, everything from lists to XML to JSON encoded strings? Our function will get ugly quickly.
+
+Multimethods let you have a single function with multiple implementations. They allow you to pick the implementation based on any characteristic of its arguments. It is an exercise in splitting the problem apart.
+
+#+begin_src clojure
+(defn dispatch-book-format [book]
+  (cond
+    (vector? book) :vector-book
+    (contains? book :title) :standard-map
+    (contains? book :book) :alternative-map))
+
+(defmulti normalize-book dispatch-book-format)
+
+(defmethod normalize-book :vector-book [book]
+  {:title (first book) :author (second book)})
+
+(defmethod normalize-book :standard-map [book]
+  book)
+
+(defmethod normalize-book :alternative-map [book]
+  {:title (:book book) :author (:by book)})
+
+(normalize-book {:title "War and Peace" :author "Tolstoy"})
+(normalize-book {:book "Emma" :by "Austen"})
+(normalize-book ["1984" "Orwell"])
+#+end_src
+
+#+RESULTS:
+| #'user/dispatch-book-format                 |
+| #'user/normalize-book                       |
+| #multifn[normalize-book 0x7e65700]          |
+| #multifn[normalize-book 0x7e65700]          |
+| #multifn[normalize-book 0x7e65700]          |
+| {:title "War and Peace", :author "Tolstoy"} |
+| {:title "Emma", :author "Austen"}           |
+| {:title "1984", :author "Orwell"}           |
+
+The cool thing about multimethods is that in writing the dispatch function, you can choose any criteria you want. If our book maps include a =:published= key, we could write a multimethod that decides what to do based on that year:
+
+#+begin_src clojure
+(defn dispatch-published [book]
+  (cond
+    (< (:published book) 1928) :public-domain
+    (< (:published book) 1978) :old-copyright
+    :else :new-copyright))
+
+(defmulti compute-royalties dispatch-published)
+(defmethod compute-royalties :old-copyright [book]
+  ;; Compute royalties based on old copyright law.
+  )
+(defmethod compute-royalties :new-copyright [book]
+  ;; Compute royalties based on new copyright law.
+  )
+#+end_src
+
+In a sense, multimethods are a generalization of the kind of type-based polymorphism that you find in most object-oriented programming languages. Multimethods are more general iln the sense that /you/ get to decide which criteria to use to pick the implementation. You can always change the guts of =dispatch-book-format= to pick your implementation a different way. Or create a different multimethod that categorizes its arguments in some other way.
+
+Even better: there's no requirements t hat all the bits of a single multimethod be defined in the same file or at the same time.
+
+#+begin_src clojure
+(def books [{:title "Pride and Prejudice" :author "Austen" :enre :romance}
+            {:title "World War Z" :author "Brooks" :genre :zombie}])
+
+(defmulti book-description :genre)
+(defmethod book-description :romance [book]
+  (str "The heart warming new romance by " (:author book)))
+(defmethod book-description :zombie [book]
+  (str "The heart consuming new zombie adventure by " (:author book)))
+
+;; what if someone comes up with a new genre?
+(def ppz {:title "Pride and Prejudice and Zombies"
+          :author "Grahame-Smith"
+          :genre :zombie-romance})
+
+(defmethod book-description :zombie-romance [book]
+  (str "The heart warming and consuming new romance by " (:author book)))
+#+end_src
+
+** Deeply Recursive
+#+begin_src clojure
+(def books
+  [{:title "Jaws" :copies-sold 2000000}
+   {:title "Emma" :copies-sold 3000000}
+   {:title "2001" :copies-sold 4000000}])
+(defn sum-copies
+  ([books] (sum-copies books 0))
+  ([books total]
+   (if (empty? books)
+     total
+     (sum-copies
+      (rest books)
+      (+ total (:copies-sold (first books)))))))
+(sum-copies books)
+
+;; take advantage of tail-call optimization with `recur`
+(defn sum-copies
+  ([books] (sum-copies books 0))
+  ([books total]
+   (if (empty? books)
+     total
+     (recur
+      (rest books)
+      (+ total (:copies-sold (first books)))))))
+
+;; we needed to build a new function to use `recur`,
+;; but we could dispense of it and use `loop` instead.
+(defn sum-copies [books]
+  (loop [books books
+         total 0]
+    (if (empty? books)
+      total
+      (recur
+       (rest books)
+       (+ total (:copies-sold (first books)))))))
+#+end_src
+
+#+RESULTS:
+| #'user/books      |
+| #'user/sum-copies |
+| 9000000           |
+| #'user/sum-copies |
+
+=loop= can be thought of as a blend of a phantom function and a call to that function. In our example, the 'function' has two parameters, =books= and =total=, which initially get bound to the original book collection and 0.
+
+With =books= and =total= bound, we evaluate the body, in this case the =if= expression. The trick is that =loop= works with =recur=. When it hits =recur= inside the body of a =loop=, Clojure will reset the values bound to the symvols to values passed into =recur= and the recursively reevaluate the =loop= body.
+
+Keep in mind: =recur=, eitiher with or without =loop= is /the/ way of writing a completely general-purpose loop. Think about it: =recur= lets you execute the same block of code over and over, each time with slightly different data, and break out just when you are ready. That is a loop.
+
+The second thing is that =recur= is a resonably low-level tool. Chances are that there is a better and /easier/ way to get your task done. For example, if you needed to add up all the book sales, you would probably say something like this:
+
+#+begin_src clojure
+(defn sum-copies [books] (apply + (map :copies-sold books)))
+#+end_src
+
+=map= converts the collection of books into a collection of numbers, while =apply += sums up the copies. Details aside, the beauty of this last rendition of =sum-copies= is that it enables us to rise above the item-by-item processing of =loop= and =recur= and instead deal with the collection as a whole. While =loop= and =recur= are great tools to have as a last resort, there is usually a better way.
+
+** Docstrings
+#+begin_src clojure
+(defn average
+  "Return the average of a and b"
+  [a b]
+  (/ (+ a b) 2.0))
+#+end_src
+
+#+RESULTS:
+: #'user/average
+
+Docstrings may also be used for any =def=. Just remember that the docstring always comes after the function name.
+
+** Pre and Post Conditions
+Suppose we had a function to publish a book and we wanted make sure our book had a title before we did any publishing.
+
+#+begin_src clojure
+(defn publish-book [book]
+  (when-not (contains? book :title)
+    (throw (ex-info "Books must contain :title" {:book book})))
+  (print-book book)
+  (ship-book book))
+
+;; ...or, we could use `:pre`.
+(defn publish-book [book]
+  {:pre [(:title book)]}
+  (print-book book)
+  (ship-book book))
+#+end_src
+
+A map with the =:pre= key, for which the value should be a vector of expressions. You will get a runtime exception if any of the expressions turn out to be falsy when the function is called.
+
+#+begin_src clojure
+(defn publish-book [book]
+  {:pre [(:title book) (:author book)]}
+  (print-book book)
+  (ship-book book))
+
+;; and we could even define a `post`!
+(defn publish-book [book]
+  {:pre [(:title book) (:author book)]
+   :post [(boolean? %)]}
+  (print-book book)
+  (ship-book book))
+#+end_src
+
+Note that we use =%= to stand in for the return value in =:post= conditions.
+
+** Staying out of trouble
+You can mix and match the variadic =&= into a multi-arity function if you are careful. Here's us being careful:
+
+#+begin_src clojure
+(defn one-two-or-more
+  ([a] (str "One arg: " a))
+  ([a b] (str "Two args: " a b))
+  ([a b & more] (str "More than two: " a b more)))
+
+;; but, what if we were less careful?
+(defn one-two-or-more
+  ([a] (str "one" a))
+  ([a b] (str "two" a b))
+  ([& more] (str "more" more)))
+;; answer: the compiler would be angry
+#+end_src
+
+Also note that =&= has a special meaning in the context of defining function arguments. Watch your whitespace.
+
+** In the wild
+Let's examine our friend the === function.
+
+#+begin_src clojure
+(defn =
+  "Equality. Returns true if x equals y, false if not. Same as
+  Java x.equals(y) except it also works for nil, and compares
+  numbers and collections in a type-independent manner.
+  Clojure's immutable data structures define equals()
+  (and thus =) as a value, not an identity, comparison"
+  ([x] true)
+  ([x y] (clojure.lang.Util/equiv x y))
+  ([x y & more]
+   (if (clojure.lang.Util/equiv x y)
+     (if (next more)
+       (recur y (first more) (next more))
+       (clojure.lang.Util/equiv y (first more)))
+     false)))
+#+end_src
+
+Here's a multimethod from ClojureScript (somewhat simplified):
+
+#+begin_src clojure
+(defmulti to-url class)
+(defmethod to-url File [f] (.toURL (.toURI f)))
+(defmethod to-url URL [url] url)
+(defmethod to-url String [s] (to-url (io/file s)))
+#+end_src
+
+* Functional Things
+What makes functional languages different?
+
+** Functions are values
+Let's imagine that we have decided to add price and genre to the maps we've been using to keep track of our books, like this:
+
+#+name: defns
+#+begin_src clojure
+(def dracula {:title "Dracula"
+              :author "Stoker"
+              :price 1.99
+              :genre :horror})
+(defn cheap? [book]
+  (when (<= (:price book) 9.99)
+    book))
+(defn pricey? [book]
+  (when (> (:price book) 9.99)
+    book))
+(defn horror? [book]
+  (when (= (:genre book) :horror)
+    book))
+(defn adventure? [book]
+  (when (= (:genre book) :adventure)
+    book))
+#+end_src
+
+#+begin_src clojure :noweb yes
+<<defns>>
+(cheap? dracula)
+(pricey? dracula)
+(horror? dracula)
+(adventure? dracula)
+#+end_src
+
+#+RESULTS:
+| #'user/dracula                                                    |
+| #'user/cheap?                                                     |
+| #'user/pricey?                                                    |
+| {:title "Dracula", :author "Stoker", :price 1.99, :genre :horror} |
+| #'user/horror?                                                    |
+| #'user/adventure?                                                 |
+| {:title "Dracula", :author "Stoker", :price 1.99, :genre :horror} |
+
+The interesting thing about these functions is that they take advantage of Clojure's truthy logic and return =nil= when the book fails the test, and the book map itself--which is truthy--when it passes.
+
+We might also be interested in combinations of price and genre:
+
+#+begin_src clojure :noweb yes
+<<defns>>
+(defn cheap-horror? [book]
+  (when (and (cheap? book)
+             (horror? book))
+    book))
+(defn pricy-adventure? [book]
+  (when (and (pricey? book)
+             (adventure? book))
+    book))
+#+end_src
+
+#+RESULTS:
+| #'user/dracula          |
+| #'user/cheap?           |
+| #'user/pricey?          |
+| #'user/horror?          |
+| #'user/adventure?       |
+| #'user/cheap-horror?    |
+| #'user/pricy-adventure? |
+
+Now, we could write functions like this all day. But the key word is /write/. When you are building real systems you don't want to spend your t ime writing these kinds of combinations by hand. What you want is to code the basic operations and then create combinations dynamically.
+
+Fortunately, all you need to get out of the hand-coding business is realize that in Clojure, functions have something in common with numbers and strings and Booleans and vectors. Like these more mundane things, functions /are values/.
+
+#+begin_src clojure :noweb yes
+<<defns>>
+(def reasonably-priced? cheap?)
+(reasonably-priced? dracula)
+(defn run-with-dracula [f]
+  (f dracula))
+(run-with-dracula pricey?)
+(run-with-dracula horror?)
+(defn both? [first-predicate-f second-predicate-f book]
+  (when (and (first-predicate-f book)
+             (second-predicate-f book))
+    book))
+(both? cheap? horror? dracula)
+(both? pricey? adventure? dracula)
+#+end_src
+
+The difference between =both?= and the specific =cheap-horror?= function is that =both?= lets you pass in your pair of predicate functions, which means you can use it to run your books by any two predicates you can cook up.
+
+** Functions on the Fly
+You can manufacture new functions on the fly.
+
+#+begin_src clojure
+;; fn is a lot like defn, except you leave out the name.
+(fn [n] (* 2 n))
+(str "A function: " (fn [n] (* 2 n)))
+(def double-it (fn [n] (* 2 n)))
+(double-it 10)
+((fn [n] (* 2 n)) 10)
+#+end_src
+
+#+RESULTS:
+| #function[user/eval5856/fn--5857]             |
+| "A function: user$eval5860$fn__5861@1c51aedb" |
+| #'user/double-it                              |
+| 20                                            |
+| 20                                            |
+
+Let's apply this to our book example.
+
+#+begin_src clojure
+(fn [book]
+  (when (<= (:price book) 9.99)
+    book))
+(defn cheaper-f [max-price]
+  (fn [book]
+    (when (<= (:price book) max-price)
+      book)))
+(def real-cheap? (cheaper-f 1.00))
+(def kind-of-cheap? (cheaper-f 1.99))
+(def marginally-cheap? (cheaper-f 5.99))
+(real-cheap? dracula)
+(kind-of-cheap? dracula)
+(marginally-cheap? dracula)
+#+end_src
+
+Note that a function produced by =fn= picks up and remembers the parameters around when the =fn= was run. So in the last example, the function produced hwen you call =(cheaper-f 1.00)= will remember that max-price is 1.00 while the function produced by =(cheaper-f 5.99)= will remember max-price as 5.99.
+
+We could also write a function that makes =both?=-like functions.
+
+#+begin_src clojure
+(defn both-f [predicate-f-1 predicate-f-2]
+  (fn [book]
+    (when (and (predicate-f-1 book) (predicate-f-2 book))
+      book)))
+(def cheap-horror? (both-f cheap? horror?))
+(def real-cheap-adventure? (both-f real-cheap? adventure?))
+(def real-cheap-horror? (both-f real-cheap? horror?))
+(def cheap-horror-possession?
+  (both-f cheap-horror?
+          (fn [book] (= (:title book) "Possession"))))
+#+end_src
+
+The idea of a function grabbing and remembering the bindings that existed when the function was born is called a /closure/--saying that the function /closes/ over the scope in which it was defined. More than anything else, the twin ideas of functions as values and /closures/ are at the heart of what makes Clojure what it is.
+
+** A Functional Toolkit
+Clojure revolves around creating, combining, and using functions. We'll look at =apply= next.
+
+#+begin_src clojure
+(+ 1 2 3 4)
+(def the-function +)
+(def args [1 2 3 4])
+(apply the-function args)
+#+end_src
+
+#+RESULTS:
+|                  10 |
+| #'user/the-function |
+|         #'user/args |
+|                  10 |
+
+=apply= is particularly useful for converting from one type of value to another:
+
+#+begin_src clojure
+(def v ["The number " 2 " best selling " "book."])
+(apply str v)
+#+end_src
+
+#+RESULTS:
+| #'user/v                          |
+| "The number 2 best selling book." |
