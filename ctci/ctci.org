@@ -1,0 +1,502 @@
+#+TITLE: Coding the Crack Interview
+#+author: Logan Rios
+
+Notes and interview questions from the (in)famous CTCI! Note that everything here is done in a literate style. Run =C-c C-v t= to tangle out to individual problem files.
+
+* :toc:
+- [[#introduction][Introduction]]
+- [[#arrays-and-strings][Arrays and Strings]]
+  - [[#hash-tables][Hash Tables]]
+  - [[#stringbuilder][StringBuilder]]
+  - [[#11-is-unique][1.1 Is Unique]]
+  - [[#12-check-permutations][1.2 Check Permutations]]
+  - [[#13-url-ify][1.3 URL-ify]]
+  - [[#14-palindrome-permutation][1.4 Palindrome Permutation]]
+  - [[#15-one-away-todo][1.5 One Away TODO]]
+  - [[#16-string-compression][1.6 String Compression]]
+  - [[#17-rotate-matrix][1.7 Rotate Matrix]]
+- [[#appendix][Appendix]]
+  - [[#cleanup][Cleanup]]
+  - [[#decisions][Decisions]]
+
+* Introduction
+#+begin_quote
+Given an array of distinct integer values, count the number of pairs of integers that have difference ~k~. For example, given the array ~{1, 7, 5, 9, 2, 12, 3}~ and the difference ~k = 2~, there are four pairs with difference 2: ~(1 3) (3 5) (5 7) (7 9)~.
+#+end_quote
+
+We /could/ start with a brute force algorithm, starting from the first element, and then search through the remaining elements. For each pair, compute the difference. If the difference equals ~k~, increment a counter of the difference.
+
+#+begin_src python
+results = 0
+for i in range(n):
+    for j in range(n):
+        if a[i] - a[j] == k:
+            results += 1
+return results
+#+end_src
+
+However, the performance is inherently O(N^2) here, which is no good. What's out bottleneck? The search for the "other side" of the pair.
+
+The other side is always =x - k= or =x + k=. If we sorted the array, we could find the other side for each of the N elements in O(log N) time by doing a binary search. We now have a two-step algorithm, where both steps take O(N log N) time. Now, sorting is the new bottleneck. Optimizing the second step won't help because the first step is slowing us down, anyway.
+
+We can just get rid of the first step entirely and operate on an unsorted array. How can we find things quickly in an unsorted array? With a hash table!
+
+Throw everything in the array into the hash table. Then, to look up if =x-k= or =x+k= exist in the array, we just look it up in the has table. We can do this in O(N) time.
+
+In general, you cannot search an array in better than O(log N) time.
+Throw everything in B into a hash table. Any precomputation that's O(N) or less is 'free'.
+
+Most questions will take about 20 to 30 minutes to solve, provided you're a 'strong' candidate.
+
+* Arrays and Strings
+** Hash Tables
+An ArrayList in Java is an array-like data structure that offers dynamic resizing, but still provides O(1) access (unlike Linked Lists).
+
+#+begin_src java
+ArrayList<String> merge(String[] words, String[] more) {
+    ArrayList<String> sentence = new ArrayList<String>();
+    for (String w : words) sentence.add(w);
+    for (String w : more) sentence.add(w);
+    return sentence;
+}
+#+end_src
+
+An essential data structure for interviews. Make sure you're comfortable with the dynamically resizable version of an array in whatever language you're working with. Note the name of the data structure as well as the "resizing factor" (which happens to be 2 in Java, but can vary).
+
+** StringBuilder
+Suppose you are concatenating a list of strings, as shown below. What would the runtime of this code be? Assume that all strings are the same length =x=, and that there are =n= strings.
+
+#+begin_src java
+String joinWords(String[] words) {
+    String sentence = "";
+    for (String w : words) {
+        sentence = sentence + w;
+    }
+    return sentence;
+}
+#+end_src
+
+This reduces to =O(xn^2)=. On each concatenation, a new String is created, and the two strings are copied over, character by character. The second iteration requires copying 2x characters. The third iteration requires 3x, and so on. The total time therefore is =O(x+2x+...+nx)=.
+
+StringBuilder, on the other hand, creates a resizable array of all the strings, and copies them back to a string only when necessary.
+
+#+begin_src java
+String joinWords(String[] words) {
+    StringBuilder sentence = new StringBuilder();
+    for (String w : words)
+        sentence.append(w);
+    return sentence.toString();
+}
+#+end_src
+
+A good exercise to practice strings, arrays, and general data structures is to implement your own version of StringBuilder, HashTable, and ArrayList.
+
+** 1.1 Is Unique
+Implement an algorithm to determine if a string has all-unique characters. What if you cannot use additional data structures?
+
+#+begin_src java :tangle IsUnique.java
+import java.util.*;
+
+public class IsUnique {
+    public static boolean IsUnique(String s) {
+        HashMap<Character, Boolean> chars = new HashMap<>();
+        for (int i = 0; i < s.length(); i++) {
+            Character c = s.charAt(i);
+            if (chars.containsKey(c)) return false;
+            chars.put(c, true); // technically value doesn't matter??
+        }
+        return true;
+    }
+
+    public static void main(String[] args) {
+        System.out.println(IsUnique("aaaa"));
+        System.out.println(IsUnique("aaab"));
+        System.out.println(IsUnique("dbad"));
+        System.out.println(IsUnique("abcd"));
+        System.out.println(IsUnique("abcdefghijklmnop"));
+    }
+}
+#+end_src
+
+#+RESULTS:
+: false
+: false
+: false
+: true
+: true
+
+As far as not using additional data structures... that's a toughie. The HashMap doesn't really need the boolean field; we don't use it. The question is more WHY.
+
+TODO come back to me
+
+Lessons learned:
++ ~String.length()~ is a method
++ ~HashMap.containsKey()~
+
+** 1.2 Check Permutations
+Given two strings, write a method to decide if one is a permutation of the other.
+
+#+begin_src java :tangle CheckPermutations.java
+import java.util.*;
+
+public class CheckPermutations {
+    public static boolean IsPermutation(String a, String b) {
+        int alen = a.length();
+        int blen = b.length();
+        if (alen != blen) return false;
+
+        HashMap<Character, Integer> achars = new HashMap<>();
+        for (int i = 0; i < alen; i++) {
+            Character c = a.charAt(i);
+            if (achars.containsKey(c)) {
+                achars.put(c, achars.get(c) + 1);
+                continue;
+            }
+            // c is new to the map
+            achars.put(c, 1);
+        }
+
+        for (int i = 0; i < blen; i++) {
+            Character c = b.charAt(i);
+            if (!(achars.containsKey(c)))
+                return false;
+
+            int count = achars.get(c);
+            if (count == 0) return false;
+            achars.put(c, count - 1);
+        }
+
+        return true;
+    }
+
+    public static void main(String[] args) {
+        // true cases
+        System.out.println(IsPermutation("aba", "aab"));
+        System.out.println(IsPermutation("abc", "cba"));
+        System.out.println(IsPermutation("aba", "aab"));
+
+        // false cases
+        System.out.println(IsPermutation("abd", "ddd"));
+        System.out.println(IsPermutation("xxx", "abc"));
+        System.out.println(IsPermutation("xyz", "zyyyx"));
+    }
+}
+#+end_src
+
+#+RESULTS:
+: true
+: true
+: true
+: false
+: false
+: false
+
+I'm thinking a HashMap of all the characters correlated with their indices is the easiest thing we can do here. Take the first string (or the second, technically it doesn't matter) and slice it into a hashmap. Then, iterate through the second string until we figure it out. Obviously there are some shortcuts we can take--if they don't have a matching length, for example, we can throw them out right away.
+
+Lessons Learned:
++ Stop trying to get cute with implied types. It doesn't work here.
+
+Done!
+
+** 1.3 URL-ify
+Write a method to replace all spaces in a string with =%20=. You may assume that the string has sufficient space at the end to hold the additional characters, and that you are given the "true" length of the string. If you are implementing in Java, please use a character array so that you can perform this operation in place.
+
+#+begin_src java :tangle Urlify.java
+import java.util.*;
+
+public class Urlify {
+    public static char[] Urlify(char[] ca, int len) {
+        for (int i = 0; i < len; i++) {
+            char c = ca[i];
+            if (c != ' ') continue;
+            // First, shift all the characters after this one down three
+            // We can use ca.length because we know we have enoug space
+            for (int j = ca.length - 3; j > i; j--) {
+                ca[j + 2] = ca[j];
+            }
+            // This is the last step
+            ca[i] = '%';
+            ca[i+1] = '2';
+            ca[i+2] = '0';
+            i += 2;
+        }
+        return ca;
+    }
+
+    public static void main(String[] args) {
+        System.out.println(Urlify("Mr John Smith      ".toCharArray(), 13));
+        System.out.println(Urlify("Monsieur Hibidad  ".toCharArray(), 16));
+    }
+}
+#+end_src
+
+#+RESULTS:
+: Mr%20John%20Smith
+: Monsieur%20Hibidad
+
+I am a little confused by this need to work inside a character array. So, the output string should be a character array itself? Or, I suppose I can just initialize a new character array. That makes more sense.
+
+Performing the operation in place is ridiculous. Oh--presume that you have enough space to move all the extra characters, of course. That means that we don't have to dynamically resize, and we can just perform the operation in place...?
+
+So the parameter we are given for "true size" is just how many characters before the end we have to go--unfortunately, it says nothing about our character array. No way to break this into a binary search, so that means we have to have at least O(N) time. We can't use the =StringBuiler=, so that limits our options...
+
+The problem is that we have to do it in place! So how do /I/ know when it's over... oh. It's obvious. Our writing index and our character index do not necessarily have to be the same.
+
+So I'm iterating through the array to figure out when I don't have to iterate through the array a second time. That seems... inefficient. Work backwards through the array to shift it over. Start at ~length - 2~ because we are now going to disregard the last two characters, and just blindly overwrite them.
+
+Lessons Learned:
++ The ~String.toCharArray()~ method.
++ Primitive arrays have a ~arr.length~ as a /property/, not a function.
+
+This one was quite difficult--especially figuring out how exactly to manipulate the indices to do it in-place. I could easily decrease this from O(N^2) time, provided I could increase the space requirements (and actually utilize, I don't know, a StringBuilder or a dynamic array).
+
+** 1.4 Palindrome Permutation
+#+begin_quote
+Given a string, write a function to check if it is a permutation of a palindrome. A palindrome is a word or phrase that is the same forwards and backwards. A permutation is a rearrangement of letters. The palindrome does not need to be limited to just dictionary words.
+
+EXAMPLE
+Input: Tact coa
+Output: True (permutations: "taco cat", "atco cta", etc.)
+#+end_quote
+
+A few components to this problem here--based on our solution just a few exercises ago, we clearly /know/ how to check if a string is a permutation. The bigger problem is determining if some permutation is a palindrome, which is quite difficult. Our BCR here is probably O(log N), since palindrome checking is about of that length, but I highly doubt that we'll even get that close.
+
+We could generate /every single permutation/ of a given string, but that means something along the lines of O(N!) time--horrifically bad.
+
+A-ha! This question is not as hard as it seems, especially because we've no need to /generate/ all of the possible permutations. Rather, we simply must count every occurrence of each given character in a string, and for each character, if ~char % 2 == 0~, we know we have a valid string!
+
+Although it's actually quite a bit stickier than that. If the string's length is an odd number, we can technically have /1/ character that could just exist in the middle. Furthermore, we need to disregard space characters (I'll assume punctuation is off the table, for now). Given the example input, it may or may not be worthwhile to force everything to lowercase first, too.
+
+#+begin_src java :tangle PalindromePermutation.java
+import java.util.*;
+
+public class PalindromePermutation {
+    public static boolean IsPalPerm(String s) {
+        int len = s.length();
+        int charlen = 0;
+        HashMap<Character, Integer> counts = new HashMap<>();
+        for (int i = 0; i < len; i++) {
+            Character c = s.charAt(i);
+            // disregard spaces
+            if (c == ' ') continue;
+            charlen++;
+            if (counts.containsKey(c)) {
+                counts.put(c, counts.get(c) + 1);
+                continue;
+            }
+
+            counts.put(c, 1);
+        }
+
+        boolean foundMiddle = false;
+
+        for (Integer count : counts.values()) {
+            if (count % 2 == 0) continue;
+
+            if (!foundMiddle && charlen % 2 == 1) {
+                foundMiddle = true;
+                continue;
+            }
+
+            return false;
+        }
+        return true;
+    }
+
+    public static void main(String[] args) {
+        System.out.println(IsPalPerm("tact coa") == true);
+        System.out.println(IsPalPerm("a plan a canal a man panama") == true);
+        System.out.println(IsPalPerm("abcdefghijklmnop") == false);
+        System.out.println(IsPalPerm("dadgum") == false);
+    }
+}
+#+end_src
+
+#+RESULTS:
+: counts {a=2, c=2, t=2, o=1}
+: true
+: counts {p=2, a=10, c=1, l=2, m=2, n=4}
+: true
+: counts {a=1, b=1, c=1, d=1, e=1, f=1, g=1, h=1, i=1, j=1, k=1, l=1, m=1, n=1, o=1, p=1}
+: true
+: counts {a=1, d=2, u=1, g=1, m=1}
+: true
+
+Lessons Learned:
++ You can iterate over a =HashMap= with for-each syntax in =map.values()=. I assume there is something more or less similar for keys...
+
+Done!
+
+** 1.5 One Away TODO
+#+begin_quote
+There are three types of edits that can be performed on strings: insert a character, remove a character, or replace a character. Given two strings, write a function to check if they are one edit (or zero edits) away.
+#+end_quote
+
+Off the top of my head, this appears to be relatively easy to do--you of course have valid paths for each of those operations, and the second that more than one of those operations occur, you can break out with a false. This gives us a BCR of about O(N), since we can run through both strings concurrently, no?
+
+One problem I see right away is asking which length to loop over. Either way, we /may/ run into problems that hit index-out-of-bounds errors. This basically means that we should be tracking our a-index and our b-index separately. In that sense, it really doesn't matter which one we loop through--although we should probably pick the longer of the two, just to make sure.
+
+Insertion: The current character is not the same, /and/ the next character is different. Technically, insertion and removal are the same thing, just on opposite sides!
+
+Removal: Implies that /this/ character is not the same, but that the character afterward will be the same character. It is tough to say.
+
+Replacement: Check last? When you replace a character, everything before and after should be the exact same. That means we can simply set the =moveMade= flag to =true=, and move on with our lives.
+
+#+begin_src java :tangle OneAway.java
+import java.util.*;
+
+public class OneAway {
+    public static boolean IsOneAway(String a, String b) {
+        int alen = a.length();
+        int blen = b.length();
+
+        // sanity check: make sure they're of similar size
+        if ((alen != blen) &&
+            (alen != blen - 1) &&
+            (alen != blen + 1))
+            return false;
+
+        int truelen = (alen > blen) ? alen : blen;
+
+        int aidx = 0;
+        int bidx = 0;
+        boolean moveMade = false;
+        for (int i = 0; i < truelen; i++) {
+            char ac = a.charAt(aidx);
+            char bc = a.charAt(bidx);
+            if (ac == bc) {
+                aidx++; bidx++;
+                continue;
+            }
+
+            if (moveMade) return false;
+
+            // there's been a divergence!
+
+        }
+
+        return true;
+    }
+
+    public static void main(String[] args) {
+        System.out.println(IsOneAway("pale", "ple") == true);
+        System.out.println(IsOneAway("pales", "ple") == true);
+        System.out.println(IsOneAway("pale", "bale") == true);
+        System.out.println(IsOneAway("pale", "bake") == false);
+        System.out.println(IsOneAway("pale", "blakeson") == false);
+    }
+}
+#+end_src
+
+#+RESULTS:
+: true
+: false
+: true
+: false
+: true
+
+** 1.6 String Compression
+#+begin_quote
+Implement a method to perform basic string compression using the counts of repeated characters. For example, the string =aabcccccaaa= would become =a2b1c5a3=. If the compressed string would not be smaller than the original string, your method should return the original string. You can assume the string has only uppercase and lowercase letters.
+#+end_quote
+
+#+begin_src java
+import java.util.*;
+
+public class Compressor {
+    public static StringBuilder appendCharCount(StringBuilder sb, char c, int count) {
+        sb.append(c);
+        sb.append(count);
+        return sb;
+    }
+
+    public static String compress(String str) {
+        // Grab the string's length first.
+        int inLength = str.length();
+        // Now we'll go through the compression process
+        StringBuilder cstr = new StringBuilder();
+        char prev = ' ';
+        int charRepetitions = 1;
+        boolean first = true;
+        for (int i = 0; i < inLength; i++) {
+            char curr = str.charAt(i);
+
+            // if the character is new, append the length
+            // of the previous sequence to the string.
+            if (prev != curr) {
+                if (charRepetitions == 0) {
+                    prev = curr;
+                    continue;
+                }
+
+                if (prev == ' ') {
+                    prev = curr;
+                    continue;
+                }
+
+                cstr = appendCharCount(cstr, prev, charRepetitions);
+                charRepetitions = 1;
+                prev = curr;
+                continue;
+            }
+
+            charRepetitions += 1;
+            prev = curr;
+        }
+
+        // Flush out the remainder
+        cstr = appendCharCount(cstr, prev, charRepetitions);
+
+        // Finally, make sure we're still smaller.
+        if (cstr.toString().length() <= inLength)
+            return cstr.toString();
+
+        return str;
+    }
+    public static void main(String[] args) {
+        System.out.println(compress("aaabbc")); // == "a3b2c1");
+        System.out.println(compress("abc")); // == "abc");
+        System.out.println(compress("jjjjkkkkklllll")); // == "j4k5l5");
+    }
+}
+#+end_src
+
+#+RESULTS:
+: a3b2c1
+: abc
+: j4k5l5
+
+** 1.7 Rotate Matrix
+It was at this point that I gave up on doing the full-literate style. It works well for taking notes along the way, but is somewhat of a struggle to only get sub-windows and not the full Java-Mode. Alas, we'll leave it to the simpler files.
+
+Instead, we'll go back to the standard--each problem will have its own Java file, and we'll recompile using the Makefile like usual.
+
+* Appendix
+
+** Cleanup
+Some boilerplate that'll help us deal with everything going on here.
+
+#+begin_src makefile :tangle makefile
+.PHONY: clean
+
+clean:
+	rm -f *.class *.java makefile
+#+end_src
+
+#+RESULTS:
+: .PHONY: clean
+:
+: clean:
+: 	rm -f *.class *.java makefile
+
+#+begin_src sh
+make clean
+#+end_src
+
+#+RESULTS:
+: rm -f *.class *.java makefile
+
+** Decisions
+Why literate programming? Because now that I know what it is, I've decided that it's pretty much the /only/ way to do notes and exercises with programming. It also allows this one document to be used as my so-called 'truth source' instead of having it spread out among a lot of different files, which have to be correlated with notes. Yes, it is an absolute pain that Scheme isn't working here, but every environment has drawbacks, no?
+
+Why not use =noweb=? It's screwing with the formatting in my Java editor. Yes, I am a child and like my nice auto-tabs.

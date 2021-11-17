@@ -1,0 +1,40 @@
+#+TITLE: 57 Exercises for Programmers
+
+Admittedly, I have a serial addiction to trying new languages.
+
+* Backlog
+Roughly in order in which I intend on completing them.
+
+** [-] Clojure (=clj/=)
+** [-] Ruby (=rb/=)
+** [ ] C (=c/=)
+** [ ] Go (=go/=)
+** [ ] Rust (=rs/=)
+** [ ] Haskell (=hs/=)
+** [ ] Elixir (=exs/=)
+** [ ] Common Lisp (=cl/=)
+** [ ] Zig (=zig/=)
+** [ ] OCaml (=ml/=)
+
+* Others?
+Some other languages that I'm at least marginally curious about learning:
++ Swift (iOS development)
++ Kotlin (Android development)
++ Idris (Esoteric type research!?)
++ Elm (web UI language that doesn't suck)
++ Crystal (/might/ be worth keeping an eye on as alternative to Go/Rust for me)
++ R/Julia (should learn some data science)
++ Other Lisps (Chicken Scheme, Racket, Janet, Fennel)
++ Smalltalk/Eiffel (the OG OOP langs)
+
+* Non-goals
+Ironically, this mostly comprises languages I /should/ learn if I want to make money and pad my resume. Unfortunately, they all pretty much suck to work with.
++ Python
++ Java
++ C#
++ C++
++ JavaScript
++ TypeScript
++ PHP
++ Visual Basic
++ Ada

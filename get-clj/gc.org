@@ -1328,8 +1328,84 @@ Clojure revolves around creating, combining, and using functions. We'll look at 
 #+begin_src clojure
 (def v ["The number " 2 " best selling " "book."])
 (apply str v)
+(apply list v)
+(apply vector (apply list v))
 #+end_src
 
 #+RESULTS:
-| #'user/v                          |
-| "The number 2 best selling book." |
+| #'user/v                                   |
+| "The number 2 best selling book."          |
+| ("The number " 2 " best selling " "book.") |
+| ["The number " 2 " best selling " "book."] |
+
+Another useful function is =partial=. It's called such because it partially fills in the arguments for an existing function, producing a new function of fewer arguments in the process. For example, Clojure includes a function called =inc= that adds one to the number you pass in, so that =(inc 1)= gives you 2 and =(inc 41)= is 42. It's easy enough to make your own version of =inc=:
+
+#+begin_src clojure
+(defn my-inc [n] (+ 1 n))
+(defn my-inc (partial + 1))
+#+end_src
+
+#+RESULTS:
+: #'user/my-inc
+
+Returning to our book example, we can use =partial= to rework and simplify our cheapness-discriminating functions:
+
+#+begin_src clojure
+(defn cheaper-than [max-price book]
+  (when (<= (:price book) max-price)
+    book))
+(def real-cheap? (partial cheaper-than 1.00))
+(def kind-of-cheap? (partial cheaper-than 1.99))
+(def marginally-cheap? (partial cheaper-than 5.99))
+#+end_src
+
+Each call to =partial= there is giving us back a new function that, when called, calls =cheaper-than= with one of the prices as the first argument.
+
+Another handy function-producing functino that comes packaged with Clojure is =complement=. With =complement=, every day is opposite day. It wraps the function that you supply with a call to =not=, producing a function that is the complement of th eoriginal. For example, earlier we wrote =adventure?=, which could tell adventure books from those of other genres.
+
+#+begin_src clojure
+(defn adventure? [book]
+  (when (= (:genre book) :adventure)
+    book))
+(defn not-adventure? (complement adventure?))
+#+end_src
+
+Last one--=every-pred= combines predicate functions into a single function that /ands/ them all together. With =every-pred= we can dispense with our home-grown =both-f=:
+
+#+begin_src clojure
+(def cheap-horror? (every-pred cheap? horror?))
+(def cheap-horror-possession?
+  (every-pred
+   cheap?
+   horror?
+   (fn [book] (= (:title book) "Possession"))))
+#+end_src
+
+** Function Literals
+Another way that Clojure comes to your aid in creating new functions is to supply an alternate, minimalistic syntax for defining them. So for those moments wh en even the sleek lines of =fn= seem like too much syntactical overhead, you can use a function literal: just a =#= followed by the function body, wrapped in the usual parens. Here, for example, are the guts of =adventure?= recast as a function literal.
+
+#+begin_src clojure
+#(when (= (:genre %1) :adventure) %1)
+#+end_src
+
+There are no named arguments in function literals. Instead, they use the shell-script notation of =%1= to stand in for the first argument, =%2= for the second, and so forth. So if we needed a function that would double a numver, we might use =partial= or we'd do this:
+
+#+begin_src clojure
+#(* 2 %1)
+;; add three numbers together
+#(+ %1 %2 %3)
+#+end_src
+
+There are a few things to keep in mind about function literals, or /lambdas/, as they are known. First, function literals and =fn= produce exactly the same kind of thing; the only difference is the syntax.
+
+Second, remember that Clojure infers the numver of arguments that your literally defined function takes from the highest-numbered argument in the function body. Thus, if we modified our /double the number/ function into this:
+
+#+begin_src clojure
+#(* 2 %11)
+#+end_src
+
+We'd end up with a function that takes 11 arguments and ignores the first 10.
+
+Finally, function literals have a special feature aimed directly at the very common case of creating a one-argument function. If the functioni you're building takes a single argument, you can use plain old =%=, without a numver, for the one and only argument.
+
+(pg 70)

@@ -1,1 +1,4 @@
 *.pdf
+
+# TODO ignoring this for now...
+sicp/*
